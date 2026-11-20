@@ -23,11 +23,16 @@ export const manifestSchema = z.object({
     pitch: range,
   }),
   ramp: z.array(z.string().regex(/^#[0-9A-Fa-f]{6}$/)).min(2).optional(),
+  /** Names of the ramp's inks, in print order, for "Printing the pink layer…" (ink-pass loading). */
+  inks: z.array(z.string().min(1)).optional(),
   loading: z.enum(['ink-pass', 'bar']).default('bar'),
   chrome: z.enum(['light', 'dark']).default('light'),
 }).superRefine((m, ctx) => {
   if (m.loading === 'ink-pass' && !m.ramp) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['ramp'], message: 'ink-pass loading needs a ramp (the ink order)' });
+  }
+  if (m.inks && m.inks.length !== m.ramp?.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['inks'], message: 'inks must name each ramp color, in the same order' });
   }
 });
 

@@ -96,3 +96,14 @@ describe('validateTemplate', () => {
     expect(validateTemplate(t).errors.join(' ')).toMatch(/ink-pass/);
   });
 });
+
+describe('ink names for ink-pass loading', () => {
+  test('accepts ink names matching the ramp, used in "Printing the pink layer…"', async () => {
+    const { manifestSchema } = await import('../src/template');
+    const m = { id: 'a', version: '1.0.0', author: 'x', license: 'MIT', geometry: 'polygon', slots: {}, title: { maxLength: 48 },
+      rules: { classMethods: ['quantile'], classCount: { min: 2, max: 5 }, zoom: { min: 1, max: 10 }, pitch: { min: 0, max: 60 } },
+      ramp: ['#2499A6', '#F49AA8'], loading: 'ink-pass' };
+    expect(manifestSchema.safeParse({ ...m, inks: ['teal', 'pink'] }).success).toBe(true);
+    expect(manifestSchema.safeParse({ ...m, inks: ['teal'] }).success).toBe(false);
+  });
+});

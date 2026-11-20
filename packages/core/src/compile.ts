@@ -21,12 +21,22 @@ export interface CompileInput {
   overlay?: string;
 }
 
+export interface Legend {
+  slot: string; breaks: number[]; classCount: number; colors: RGB[];
+  /** Data range of the value slot, for the first and last legend labels. */
+  min: number; max: number;
+  /** Some features have no value: the legend shows a "no data" swatch (design D11). */
+  hasNoData: boolean;
+  /** Height key, when a height slot is mapped (design D11). */
+  height?: { slot: string; low: number; high: number };
+}
+
 export interface Choices { method: ClassMethod; classCount: number; heightScale?: number; pitch?: number }
 
 export interface CompileResult {
   deck: { layers: unknown[] } & Record<string, unknown>;
   features: { type: 'Feature'; properties: Record<string, unknown>; geometry: unknown }[];
-  legend: { slot: string; breaks: number[]; classCount: number; colors: RGB[] } | null;
+  legend: Legend | null;
   choices: Choices;
   warnings: string[];
 }
@@ -56,6 +66,7 @@ export function compile(input: CompileInput): CompileResult {
   }));
 
   let legend: CompileResult['legend'] = null;
+  let heightKey: Legend['height'];
   const deck = mapStrings(structuredClone(input.deck), (value, key) => {
     const slot = SLOT_RE.exec(value)?.[1];
     if (!slot) return value;
@@ -64,10 +75,12 @@ export function compile(input: CompileInput): CompileResult {
     if (COLOR_PROPS.has(key)) {
       const c = classify(vals, choices.method, choices.classCount);
       const colors = resampleRamp(m.ramp ?? DEFAULT_RAMP, c.classCount);
-      legend ??= { slot, breaks: c.breaks, classCount: c.classCount, colors };
+      const all = prepared.values[slot] ?? [];
+      legend ??= { slot, breaks: c.breaks, classCount: c.classCount, colors, min: Math.min(...vals), max: Math.max(...vals), hasNoData: all.some(v => v === null) };
       return { '@@function': 'zmClassColor', slot, breaks: c.breaks, colors };
     }
     if (NUMBER_PROPS.has(key)) {
+      heightKey ??= { slot, low: Math.min(...vals), high: Math.max(...vals) };
       return { '@@function': 'zmHeight', slot, max: Math.max(...vals), scale: choices.heightScale ?? 1 };
     }
     throw new Error(`Slot "${slot}" is used in ${key}, which zullumap can't drive from data yet`);
@@ -75,6 +88,7 @@ export function compile(input: CompileInput): CompileResult {
 
   // `legend` is assigned inside the callback above, which TypeScript's narrowing can't see.
   const resolved = legend as CompileResult['legend'];
+  if (resolved && heightKey) resolved.height = heightKey;
   if (resolved && resolved.classCount < choices.classCount) {
     prepared.warnings.push(`Only ${resolved.classCount} classes were possible (requested ${choices.classCount})`);
   }

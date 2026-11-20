@@ -7,9 +7,13 @@
   ],
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p packages/core --noEmit"
+    "test:e2e": "playwright test",
+    "build": "npm run build -w @zullumap/viewer",
+    "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/viewer --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "happy-dom": "^21.0.4",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"
   }

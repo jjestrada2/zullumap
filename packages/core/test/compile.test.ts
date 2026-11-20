@@ -100,3 +100,20 @@ describe('accessorHelpers', () => {
     expect(h(f(0, null))).toBe(0);
   });
 });
+
+describe('compile legend for the overlay (design D11)', () => {
+  test('includes the data range so every class gets a labelled range', () => {
+    expect(compile(base).legend).toMatchObject({ min: 1, max: 8, hasNoData: false });
+  });
+
+  test('flags missing values so the legend shows a no-data swatch', () => {
+    const withGap = structuredClone(data);
+    (withGap.features[0]!.properties as Record<string, unknown>).pop = null;
+    expect(compile({ ...base, data: withGap }).legend?.hasNoData).toBe(true);
+  });
+
+  test('adds a height key with the low and high values when a height slot is mapped', () => {
+    expect(compile(base).legend?.height).toEqual({ slot: 'height', low: 10, high: 80 });
+    expect(compile({ ...base, mapping: { value: 'pop' } }).legend?.height).toBeUndefined();
+  });
+});
