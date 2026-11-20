@@ -95,6 +95,11 @@ export function compile(input: CompileInput): CompileResult {
   return { deck, features, legend, choices, warnings: prepared.warnings };
 }
 
+/** The choices a map gets with no overrides; remix links store only what differs (design D12). */
+export function defaultChoices(manifest: unknown): Choices {
+  return resolveChoices(manifestSchema.parse(manifest), {});
+}
+
 function resolveChoices(m: TemplateManifest, o: NonNullable<CompileInput['options']>): Choices {
   const r = m.rules;
   const method = o.method ?? r.classMethods[0]!;

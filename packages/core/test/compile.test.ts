@@ -117,3 +117,10 @@ describe('compile legend for the overlay (design D11)', () => {
     expect(compile({ ...base, mapping: { value: 'pop' } }).legend?.height).toBeUndefined();
   });
 });
+
+describe('defaultChoices', () => {
+  test('gives the choices a map gets with no overrides, used to keep remix links short', async () => {
+    const { defaultChoices } = await import('../src/compile');
+    expect(defaultChoices(manifest)).toEqual({ method: 'quantile', classCount: 4, heightScale: 3000, pitch: 50 });
+  });
+});

@@ -1,0 +1,13 @@
+{
+  "name": "zullumap",
+  "version": "0.1.0",
+  "description": "Remixable 3D map templates: render a GeoJSON file into an interactive deck.gl + MapLibre map page.",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "zullumap": "bin/zullumap.js" },
+  "files": ["bin", "dist"],
+  "engines": { "node": ">=20" },
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {},
+  "devDependencies": { "@zullumap/core": "0.1.0", "@zullumap/viewer": "0.1.0" }
+}
