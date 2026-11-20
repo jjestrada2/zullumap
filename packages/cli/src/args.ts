@@ -1,4 +1,5 @@
 import { parseArgs } from 'node:util';
+import { join } from 'node:path';
 
 export interface RenderArgs {
   template: { id: string; version: string | undefined };
@@ -46,4 +47,26 @@ export function parseRenderArgs(argv: string[]): RenderArgs {
     template: { id: t[1]!, version: t[2] }, templateDir: values['template-dir'], data: values.data, mapping,
     title: values.title, out: values.out, options: values.options, recipe: !values['no-recipe'], open: !values['no-open'],
   };
+}
+
+export interface TrailerArgs { map: string; width: number; height: number; duration: number; fps: number; out: string }
+
+/** `zullumap trailer <map-folder> [--size 1080x1350] [--duration 12] [--fps 30] [--out trailer.mp4]` */
+export function parseTrailerArgs(argv: string[]): TrailerArgs {
+  const { values, positionals } = parseArgs({
+    args: argv, allowPositionals: true, strict: true,
+    options: { size: { type: 'string' }, duration: { type: 'string' }, fps: { type: 'string' }, out: { type: 'string' } },
+  });
+  const map = positionals[0];
+  if (!map) throw new Error('Name the map folder: zullumap trailer <map-folder>');
+  const size = /^(\d+)x(\d+)$/.exec(values.size ?? '1080x1350');
+  if (!size) throw new Error('--size must look like 1080x1350 (width x height in pixels)');
+  const width = Number(size[1]), height = Number(size[2]);
+  if ([width, height].some(n => n < 320 || n > 2160)) throw new Error('--size width and height must be between 320 and 2160 pixels');
+  if (width % 2 || height % 2) throw new Error('--size width and height must be even numbers (H.264 needs them)');
+  const duration = Number(values.duration ?? 12);
+  if (!(duration >= 1 && duration <= 30)) throw new Error('--duration must be between 1 and 30 seconds');
+  const fps = Number(values.fps ?? 30);
+  if (!(Number.isInteger(fps) && fps >= 1 && fps <= 60)) throw new Error('--fps must be between 1 and 60');
+  return { map, width, height, duration, fps, out: values.out ?? join(map, 'trailer.mp4') };
 }

@@ -8,9 +8,9 @@ import { main } from '../src/main';
 const TEMPLATE = fileURLToPath(new URL('../../../templates/risograph-choropleth', import.meta.url));
 const assets = () => ({ bootstrap: '', runtime: { inline: '' } });
 
-function run(argv: string[]) {
+async function run(argv: string[]) {
   const out: string[] = [], err: string[] = [], opened: string[] = [];
-  const code = main(argv, { out: s => out.push(s), err: s => err.push(s), open: f => opened.push(f), loadAssets: assets, isTTY: true });
+  const code = await main(argv, { out: s => out.push(s), err: s => err.push(s), open: f => opened.push(f), loadAssets: assets, isTTY: true, progress: () => {} });
   return { code, out, err, opened };
 }
 
@@ -22,9 +22,9 @@ function data() {
 }
 
 describe('zullumap CLI', () => {
-  test('render prints where the page is, the next step and the remix link, then opens it (design re-review D7)', () => {
+  test('render prints where the page is, the next step and the remix link, then opens it (design re-review D7)', async () => {
     const { dir, f } = data();
-    const r = run(['render', 'risograph-choropleth@1.0.0', '--template-dir', TEMPLATE, '--data', f, '--map', 'value=v', '--title', 'T', '--out', join(dir, 'm')]);
+    const r = await run(['render', 'risograph-choropleth@1.0.0', '--template-dir', TEMPLATE, '--data', f, '--map', 'value=v', '--title', 'T', '--out', join(dir, 'm')]);
     expect(r.code).toBe(0);
     expect(r.out).toEqual([
       `Saved your map: ${join(dir, 'm', 'index.html')}`,
@@ -34,20 +34,20 @@ describe('zullumap CLI', () => {
     expect(r.opened).toEqual([join(dir, 'm', 'index.html')]);
   });
 
-  test('--no-open skips opening the browser', () => {
+  test('--no-open skips opening the browser', async () => {
     const { dir, f } = data();
-    expect(run(['render', 'risograph-choropleth', '--template-dir', TEMPLATE, '--data', f, '--map', 'value=v', '--title', 'T', '--out', join(dir, 'm'), '--no-open']).opened).toEqual([]);
+    expect((await run(['render', 'risograph-choropleth', '--template-dir', TEMPLATE, '--data', f, '--map', 'value=v', '--title', 'T', '--out', join(dir, 'm'), '--no-open'])).opened).toEqual([]);
   });
 
-  test('prints errors as "zullumap: <message>" and exits 1', () => {
-    const r = run(['render', 'risograph-choropleth', '--template-dir', TEMPLATE, '--data', 'nope.geojson', '--map', 'value=v', '--title', 'T', '--out', 'x']);
+  test('prints errors as "zullumap: <message>" and exits 1', async () => {
+    const r = await run(['render', 'risograph-choropleth', '--template-dir', TEMPLATE, '--data', 'nope.geojson', '--map', 'value=v', '--title', 'T', '--out', 'x']);
     expect(r.code).toBe(1);
     expect(r.err[0]).toMatch(/^zullumap: .*nope\.geojson/);
   });
 
-  test('shows usage for --help and for unknown commands', () => {
-    expect(run(['--help']).out.join('\n')).toMatch(/zullumap render <template>/);
-    const r = run(['paint']);
+  test('shows usage for --help and for unknown commands', async () => {
+    expect((await run(['--help'])).out.join('\n')).toMatch(/zullumap render <template>/);
+    const r = await run(['paint']);
     expect(r.code).toBe(1);
     expect(r.err.join('\n')).toMatch(/Unknown command "paint"/);
   });

@@ -12,14 +12,15 @@ function openFile(file: string) {
   spawn(cmd, args as string[], { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
 }
 
-process.exitCode = main(process.argv.slice(2), {
+main(process.argv.slice(2), {
   out: s => process.stdout.write(s + '\n'),
   err: s => process.stderr.write(s + '\n'),
   open: openFile,
   isTTY: Boolean(process.stdout.isTTY),
+  progress: line => { if (process.stderr.isTTY) process.stderr.write(`\r\x1b[2K${line}`); },
   loadAssets: () => ({
     bootstrap: readFileSync(assetsDir + 'bootstrap.js', 'utf8'),
     // Preview: the runtime is inlined. Once @zullumap/viewer is on npm, pages load it from a pinned CDN URL with SRI (eng review D6).
     runtime: { inline: readFileSync(assetsDir + 'runtime.js', 'utf8') },
   }),
-});
+}).then(code => { process.exitCode = code; });

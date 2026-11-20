@@ -70,3 +70,27 @@ describe('buildPage (T3: data, spec and recipe inlined as JSON blocks)', () => {
     expect(payload.recipe).toBeNull();
   });
 });
+
+describe('withPoster (trailer saves the opening view, eng re-review D16)', async () => {
+  const { withPoster } = await import('../src/page');
+  const poster = 'data:image/jpeg;base64,/9j/AAAA';
+
+  test('replaces the title card with the poster image', () => {
+    const doc = parse(withPoster(buildPage(input, assets), poster));
+    expect(doc.querySelector('#zm-poster img')?.getAttribute('src')).toBe(poster);
+    expect(doc.querySelector('.zm-card')).toBeNull();
+    expect(readPayload(doc as unknown as Document).title).toBe('Density in Bogotá');
+  });
+
+  test('replaces an existing poster when the trailer is recorded again', () => {
+    const twice = withPoster(withPoster(buildPage(input, assets), poster), 'data:image/jpeg;base64,/9j/BBBB');
+    const imgs = parse(twice).querySelectorAll('#zm-poster img');
+    expect(imgs.length).toBe(1);
+    expect(imgs[0]!.getAttribute('src')).toBe('data:image/jpeg;base64,/9j/BBBB');
+  });
+
+  test('refuses pages that are not zullumap map pages, and posters over 200 KB', () => {
+    expect(() => withPoster('<html></html>', poster)).toThrow(/not a zullumap map page/);
+    expect(() => withPoster(buildPage(input, assets), `data:image/jpeg;base64,${'A'.repeat(300_000)}`)).toThrow(/200 KB/);
+  });
+});

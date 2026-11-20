@@ -9,12 +9,13 @@
     "build": "node build.mjs"
   },
   "dependencies": {
-    "@zullumap/core": "0.1.0",
     "@deck.gl/core": "9.4.1",
     "@deck.gl/json": "9.4.1",
     "@deck.gl/layers": "9.4.1",
     "@deck.gl/mapbox": "9.4.1",
-    "maplibre-gl": "5.24.1"
+    "@zullumap/core": "0.1.0",
+    "maplibre-gl": "5.24.1",
+    "qrcode-generator": "^2.0.4"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

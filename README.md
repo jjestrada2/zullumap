@@ -15,6 +15,16 @@ node packages/cli/bin/zullumap.js render risograph-choropleth@1.0.0 \
   --title "Density in Bogotá (synthetic)" --out my-map
 ```
 
+Then record a 4:5 fly-through video for LinkedIn (about 2 minutes on a laptop; the first run sets up
+the recording browser and ffmpeg):
+
+```bash
+node packages/cli/bin/zullumap.js trailer my-map
+```
+
+It saves `my-map/trailer.mp4` (12 s camera path + 3 s end card with the remix QR code) and adds the
+opening view to the map page as its loading poster. `--size 1080x1920`, `--duration` and `--fps` adjust it.
+
 `--map` connects the template's slots to your data's columns: `value` (number, color), `height` (number,
 optional) and `label` (text, optional). `--options choices.json` overrides class method, class count,
 height scale or pitch within the template's rules; `--no-recipe` leaves out the remix link.

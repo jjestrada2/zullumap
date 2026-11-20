@@ -26,6 +26,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--overprint);outline-
 .desktop-remix{position:absolute;right:28px;bottom:28px}
 .credits{position:absolute;left:24px;bottom:4px;max-width:calc(100% - 280px);margin:0;padding:2px 6px;background:var(--panel);color:var(--muted);font:12px/1.4 var(--body)}
 .credits a{color:inherit}
+.credits.capture{bottom:calc(15% + 8px);left:16px;max-width:calc(100% - 32px);font-size:10px}
 .sheet{position:absolute;left:0;right:0;bottom:0;padding:0 16px 16px;background:var(--sheet);color:var(--fg);border-radius:2px 2px 0 0;
   transform:translateY(calc(100% - 72px));transition:transform 600ms ease-out;max-height:80vh;overflow:auto}
 .sheet.open{transform:none}
@@ -57,6 +58,8 @@ const SHEET_REGION_CSS = `[data-zm-region]{position:static!important;inset:auto!
 export interface Chrome {
   /** Move template regions between the map (desktop) and the bottom sheet (phones). */
   layout(phone: boolean): void;
+  /** Trailer layout: only the credits line, just above LinkedIn's bottom safe zone (design D5). The chip is on the end card. */
+  captureLayout(): void;
   setCredits(nodes: Node[]): void;
 }
 
@@ -143,6 +146,11 @@ export function mountChrome(args: {
         if (desktopRemix) root.append(desktopRemix);
       }
       if (panel) root.append(panel);
+    },
+    captureLayout() {
+      for (const n of [chip, sheet, desktopRemix, panel]) n?.remove();
+      credits.classList.add('capture');
+      root.append(credits);
     },
     setCredits(nodes) {
       credits.replaceChildren(...nodes);

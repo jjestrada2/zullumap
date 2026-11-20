@@ -8,7 +8,7 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 execFileSync(process.execPath, [fileURLToPath(new URL('../viewer/build.mjs', import.meta.url))], { stdio: 'inherit' });
 await build({
   entryPoints: ['src/bin.ts'], outfile: 'dist/cli.js', absWorkingDir: here,
-  bundle: true, platform: 'node', format: 'esm', target: 'node20', legalComments: 'none', logLevel: 'warning',
+  bundle: true, platform: 'node', external: ['playwright', 'playwright-core', 'ffmpeg-static'], format: 'esm', target: 'node20', legalComments: 'none', logLevel: 'warning',
 });
 mkdirSync(`${here}dist/assets`, { recursive: true });
 for (const f of ['bootstrap.js', 'runtime.js']) cpSync(`${here}../viewer/dist/${f}`, `${here}dist/assets/${f}`);

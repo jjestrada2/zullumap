@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { parseRenderArgs } from './args';
+import { parseRenderArgs, parseTrailerArgs } from './args';
+import { recordTrailer } from './trailer';
 import { render } from './render';
 import type { PageAssets } from '@zullumap/viewer/src/page';
 
@@ -9,6 +10,8 @@ export interface Io {
   open(file: string): void;
   loadAssets(): PageAssets;
   isTTY: boolean;
+  /** Overwrite one status line (frame counter); '' clears it. */
+  progress(line: string): void;
 }
 
 export const USAGE = `zullumap: remixable 3D map templates
@@ -17,19 +20,28 @@ Usage:
   zullumap render <template>@<version> --template-dir <folder> --data <file.geojson>
                   --map value=<column> [--map height=<column>] [--map label=<column>]
                   --title "<title>" --out <folder> [--options <choices.json>] [--no-recipe] [--no-open]
+  zullumap trailer <map-folder> [--size 1080x1350] [--duration 12] [--fps 30] [--out trailer.mp4]
 
 Example:
   zullumap render risograph-choropleth@1.0.0 --template-dir templates/risograph-choropleth \\
     --data examples/bogota-grid.geojson --map value=density --map height=density \\
-    --title "Density in Bogotá (synthetic)" --out my-map`;
+    --title "Density in Bogotá (synthetic)" --out my-map
+  zullumap trailer my-map`;
 
 /** CLI entry: returns the exit code. */
-export function main(argv: string[], io: Io): number {
+export async function main(argv: string[], io: Io): Promise<number> {
   const [command, ...rest] = argv;
   try {
     if (!command || command === '--help' || command === '-h' || command === 'help') {
       io.out(USAGE);
       return command ? 0 : 1;
+    }
+    if (command === 'trailer') {
+      const args = parseTrailerArgs(rest);
+      const r = await recordTrailer(args, io);
+      io.out(`Saved your trailer: ${r.out}`);
+      if (r.poster) io.out('Added the opening view to the map page as its poster');
+      return 0;
     }
     if (command !== 'render') throw new Error(`Unknown command "${command}"\n\n${USAGE}`);
     const args = parseRenderArgs(rest);

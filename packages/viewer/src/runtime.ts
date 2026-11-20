@@ -5,7 +5,9 @@ import { JSONConverter, JSONConfiguration } from '@deck.gl/json';
 import { ArcLayer, ColumnLayer, GeoJsonLayer, PathLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { accessorHelpers } from '@zullumap/core/src/helpers';
+import { cameraAt, type Camera } from './camera';
 import { attributionNodes, mountChrome } from './chrome';
+import { mountEndCard } from './endcard';
 import { featuresThroughStep, inkSteps, openingMotion, INK_STEP_MS, ORBIT_MS, TILT_MS } from './motion';
 import { PAYLOAD_ID, type PagePayload } from './payload';
 import { prepareSpec } from './spec';
@@ -20,6 +22,10 @@ const OPEN_BEARING = -15;
 const ORBIT_SWEEP = 30;
 const TILT_FROM = 15;
 const PAPER = '#E9E5DC';
+/** `?zm-capture`: trailer recording. Camera is driven frame by frame and the overlay sits inside LinkedIn's safe zones (design D5). */
+const CAPTURE = new URLSearchParams(location.search).has('zm-capture');
+/** LinkedIn covers the top 8% and bottom 15% of a 4:5 video with buttons and the caption (design D5). */
+const SAFE_TOP = 0.08, SAFE_BOTTOM = 0.15;
 
 /** Default title label and legend, used when a template doesn't style its own (DESIGN.md). Low specificity on purpose. */
 const OVERLAY_DEFAULT_CSS = `
@@ -42,7 +48,8 @@ function start() {
   const sheet = new CSSStyleSheet();
   // On phones the overlay starts below the chip's strip, so a template's top-left title never sits under the chip.
   sheet.replaceSync(maplibreCss + '#zm-map canvas:focus-visible{outline:2px solid #E74F8A;outline-offset:-2px}' +
-    `#zm-overlay{top:0}@media ${PHONE}{#zm-overlay{top:${PHONE_CHIP_STRIP}px!important}}`);
+    `#zm-overlay{top:0}@media ${PHONE}{#zm-overlay{top:${PHONE_CHIP_STRIP}px!important}}` +
+    (CAPTURE ? `#zm-overlay{top:${SAFE_TOP * 100}%!important;bottom:${SAFE_BOTTOM * 100}%!important}` : ''));
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
 
   // Template overlay in its own shadow root: its CSS can't reach the page or zullumap's chrome.
@@ -56,12 +63,16 @@ function start() {
 
   const chrome = mountChrome({ payload, overlayRoot, templateStyles });
   const phone = matchMedia(PHONE);
-  chrome.layout(phone.matches);
-  phone.addEventListener('change', e => chrome.layout(e.matches));
+  if (CAPTURE) chrome.captureLayout();
+  else {
+    chrome.layout(phone.matches);
+    phone.addEventListener('change', e => chrome.layout(e.matches));
+  }
   mountSummary(payload);
 
   const fc = { type: 'FeatureCollection', features: payload.features };
-  const motion = openingMotion({ loading: payload.manifest.loading, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
+  const motion = CAPTURE ? { print: false, camera: 'none' as const }
+    : openingMotion({ loading: payload.manifest.loading, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
   const { rules } = payload.manifest;
   const pitch = payload.choices.pitch ?? rules.pitch.default ?? rules.pitch.min;
   const startPitch = motion.camera === 'tilt' ? Math.max(rules.pitch.min, pitch - TILT_FROM) : pitch;
@@ -71,10 +82,10 @@ function start() {
     container: 'zm-map',
     style: (payload.basemap ?? { version: 8, sources: {}, layers: [{ id: 'paper', type: 'background', paint: { 'background-color': PAPER } }] }) as maplibregl.StyleSpecification,
     bounds: bbox(payload.features),
-    fitBoundsOptions: { padding: phone.matches ? { top: 120, bottom: 96, left: 16, right: 16 } : { top: 96, bottom: 120, left: 48, right: 48 }, pitch: startPitch, bearing: startBearing },
+    fitBoundsOptions: { padding: fitPadding(phone.matches, overlayRoot), pitch: startPitch, bearing: startBearing },
     minZoom: rules.zoom.min, maxZoom: rules.zoom.max, maxPitch: Math.max(rules.pitch.max, pitch),
     attributionControl: false,
-    canvasContextAttributes: { preserveDrawingBuffer: new URLSearchParams(location.search).has('zm-capture') },
+    canvasContextAttributes: { preserveDrawingBuffer: CAPTURE },
   });
   map.getCanvas().setAttribute('aria-label', `3D map: ${payload.title}. Arrow keys pan, plus and minus zoom.`);
   map.on('webglcontextlost', () => boot?.fail('webgl'));
@@ -90,14 +101,32 @@ function start() {
   const steps = motion.print && payload.legend ? inkSteps({ classCount: payload.legend.classCount, inks: payload.manifest.inks }) : [];
   const layersAtStep = (step: number) => layers.map(l => l.clone({ data: { ...fc, features: featuresThroughStep(payload.features, payload.legend!, step) } } as never));
 
-  const deck = new MapboxOverlay({ interleaved: true, layers: steps.length ? layersAtStep(-1) : layers });
+  let deckDraws = 0;
+  const deck = new MapboxOverlay({ interleaved: true, layers: steps.length ? layersAtStep(-1) : layers, onAfterRender: () => { deckDraws++; } });
   map.addControl(deck as unknown as maplibregl.IControl);
 
   const api = {
     map, deck, isReady: false, motionDone: false,
     stopMotion: () => { cancelled = true; map.stop(); },
     ready: null as unknown as Promise<void>,
+    /** Trailer: move the camera to time t (0..1) along the fly-through and resolve once the frame is fully drawn. */
+    renderFrame: (t: number) => new Promise<void>(resolve => {
+      const before = deckDraws;
+      map.once('idle', () => {
+        const wait = () => (deckDraws > before ? requestAnimationFrame(() => resolve()) : requestAnimationFrame(wait));
+        wait();
+      });
+      map.jumpTo(cameraAt(t, openView, { maxPitch: map.getMaxPitch(), maxZoom: map.getMaxZoom() }));
+      map.triggerRepaint();
+    }),
+    /** Trailer poster: hide the overlay and zullumap's chrome to save a clean opening view. */
+    setDecorations: (visible: boolean) => {
+      for (const id of ['zm-overlay', 'zm-chrome']) document.getElementById(id)?.style.setProperty('visibility', visible ? 'visible' : 'hidden', 'important');
+    },
+    showEndCard: () => endCard.show(),
   };
+  const endCard = mountEndCard(payload, { safeTop: SAFE_TOP, safeBottom: SAFE_BOTTOM });
+  let openView: Camera;
   let cancelled = false;
   for (const type of ['pointerdown', 'wheel', 'keydown', 'touchstart'] as const) {
     addEventListener(type, () => { if (!api.motionDone) api.stopMotion(); }, { capture: true, passive: true });
@@ -107,8 +136,12 @@ function start() {
   api.ready = new Promise<void>(resolve => {
     map.once('load', () => {
       chrome.setCredits(credits(payload, map));
+      if (CAPTURE) frameForTrailer(map, bbox(payload.features), overlayRoot);
+      const c = map.getCenter();
+      openView = { center: [c.lng, c.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
       map.once('idle', () => requestAnimationFrame(() => {
         boot?.ready();
+        if (CAPTURE) document.getElementById('zm-poster')?.remove(); // no fade in recorded frames or the poster
         api.isReady = true;
         resolve();
         void runMotion();
@@ -132,6 +165,37 @@ function start() {
     if (!cancelled && motion.camera === 'orbit') { map.easeTo({ bearing: OPEN_BEARING, duration: ORBIT_MS, easing: easeInOut }); await sleep(ORBIT_MS); }
     api.motionDone = true;
   }
+}
+
+/**
+ * Trailer framing: fit the data either above the legend or beside it, whichever shows it bigger,
+ * always below the title and inside the safe zones.
+ */
+function frameForTrailer(map: maplibregl.Map, bounds: [[number, number], [number, number]], overlay: ShadowRoot) {
+  const rect = (r: string) => overlay.querySelector(`[data-zm-region=${r}]`)?.getBoundingClientRect();
+  const title = rect('title'), legend = rect('legend');
+  const top = Math.round(title?.height ? title.bottom + 16 : innerHeight * SAFE_TOP + 16);
+  const safeBottom = Math.round(innerHeight * SAFE_BOTTOM + 16);
+  const options = [{ top, bottom: legend?.height ? Math.round(innerHeight - legend.top + 16) : safeBottom, left: 24, right: 24 }];
+  if (legend?.height) options.push({ top, bottom: safeBottom, left: Math.round(legend.right + 16), right: 24 });
+  const opts = { pitch: map.getPitch(), bearing: map.getBearing() };
+  const best = options
+    .map(padding => map.cameraForBounds(bounds, { ...opts, padding }))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c))
+    .sort((a, b) => (b.zoom ?? 0) - (a.zoom ?? 0))[0];
+  if (best) map.jumpTo({ ...best, ...opts });
+}
+
+function fitPadding(phone: boolean, overlay: ShadowRoot) {
+  if (CAPTURE) {
+    // Frame the data between the template's title and legend, wherever the template put them.
+    const title = overlay.querySelector('[data-zm-region=title]')?.getBoundingClientRect();
+    const legend = overlay.querySelector('[data-zm-region=legend]')?.getBoundingClientRect();
+    const top = title?.height ? title.bottom + 16 : innerHeight * SAFE_TOP + 16;
+    const bottom = legend?.height ? innerHeight - legend.top + 16 : innerHeight * SAFE_BOTTOM + 16;
+    return { top: Math.round(top), bottom: Math.round(bottom), left: 24, right: 24 };
+  }
+  return phone ? { top: 120, bottom: 96, left: 16, right: 16 } : { top: 96, bottom: 120, left: 48, right: 48 };
 }
 
 function credits(p: PagePayload, map: maplibregl.Map): Node[] {

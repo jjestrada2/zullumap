@@ -64,7 +64,7 @@ export function buildPage(input: PageInput, assets: PageAssets): string {
 </head>
 <body>
 <div id="zm-map"></div>
-<div id="zm-poster" aria-hidden="true">${poster}<div class="zm-progress"><span></span></div></div>
+<div id="zm-poster" aria-hidden="true">${POSTER_START}${poster}${POSTER_END}<div class="zm-progress"><span></span></div></div>
 <div id="zm-status" role="status" aria-live="polite"></div>
 <script type="application/json" id="${PAYLOAD_ID}">${serializeJsonBlock(payload)}</script>
 <script>${scriptSafe(assets.bootstrap)}</script>
@@ -72,6 +72,17 @@ ${runtime}
 </body>
 </html>
 `;
+}
+
+const POSTER_START = '<!--zm-poster-->';
+const POSTER_END = '<!--/zm-poster-->';
+
+/** Put the opening-view poster into an existing map page, replacing the title card or an older poster. */
+export function withPoster(html: string, poster: string): string {
+  checkPoster(poster);
+  const a = html.indexOf(POSTER_START), b = html.indexOf(POSTER_END);
+  if (a < 0 || b < a) throw new Error('This is not a zullumap map page (or it was made by an older version); render it again');
+  return html.slice(0, a + POSTER_START.length) + `<img src="${escapeHtml(poster)}" alt="">` + html.slice(b);
 }
 
 /** Read the payload block back (viewer runtime and tests). */
