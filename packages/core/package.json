@@ -1,0 +1,11 @@
+{
+  "name": "@zullumap/core",
+  "version": "0.1.0",
+  "description": "Isomorphic core of zullumap: template schema, slot compiler, class breaks, recipe codec, validation. No Node-only APIs.",
+  "type": "module",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}
