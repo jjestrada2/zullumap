@@ -8,6 +8,8 @@ colors:
   on-ink: "#F3F0E8"
   paper: "#E9E5DC"
   sheet: "#F3F0E8"
+  sheet-dark: "#1C2233"
+  on-sheet-dark: "#F3F0E8"
   text: "#244C91"
   text-muted: "#4F5A85"
   overprint: "#E74F8A"
@@ -85,7 +87,7 @@ components:
 ## Colors
 
 **Strategy:** Restrained chrome (ink + paper) beside the maps' full ramp; color belongs to the maps.
-**Light or dark:** light — phones in daylight and laptops at a desk; the maps are printed-paper looks. No dark theme in v1.
+**Light or dark:** light — phones in daylight and laptops at a desk; the maps are printed-paper looks. zullumap's own map-page parts (chip, bottom sheet, primary button, state messages) switch to a dark variant only when a template declares `chrome: dark` (e.g. night columns): `sheet-dark` panels with `on-sheet-dark` text and the same pink plate (design re-review D5).
 Ink signals text, the title label, links and the primary action; `overprint` is only ever the offset plate behind the primary button and the focus ring, never text (2.8:1). `ink-pressed` is the pressed/hover fill. Map ramp tokens are the default template ramp, not chrome colors. Success text uses the darker teal; the brand teal is for map fills and icons only.
 
 ## Typography
@@ -94,7 +96,7 @@ Familjen Grotesk (Google Fonts, OFL) is the display and title-label voice: a qui
 
 ## Layout
 
-Maps and the trailer wall bleed edge to edge. Template-page text sits in one left-aligned column (max 640px, 48px from the left edge on desktop, 16px gutters on phones). Bottom sheet: 16px side padding, 24px between legend and button. 4px base unit; chrome is comfortable, legends are tight (8px). Gallery tiles: 4px gaps, one per row on phones.
+Maps and the trailer wall bleed edge to edge. Template-page text sits in one left-aligned column (max 640px, 48px from the left edge on desktop, 16px gutters on phones). Bottom sheet: 16px side padding, 24px between legend and button; collapsed it peeks 72px (grab bar + one legend row) and never covers the top-right chip. 4px base unit; chrome is comfortable, legends are tight (8px). Gallery tiles: 4px gaps, one per row on phones.
 
 ## Elevation & Depth
 
@@ -106,16 +108,18 @@ Square: 0px on buttons, labels and tiles; 2px only on the bottom sheet's top cor
 
 ## Components
 
-- **Primary button** ("Make this map with your data"): full width in the sheet, 48px tall, ink fill, on-ink 16px semibold text; pink plate offset 4px. Pressed/hover: plate slides to 0px (the plates come into register) over 120ms and the fill darkens to ink-pressed. Focus-visible: 2px pink plate ring offset 2px. Disabled: 40% opacity, no plate.
-- **Title label:** sheet fill, 1px ink border, 12px/16px padding, Familjen 20px sentence case, top-left.
-- **Attribution chip:** "made with zullumap · remix" in 13px ink text directly on the map, no background shape (on maps it gets the ≥85% sheet backing required by D10).
+- **Primary button, desktop (≥600px):** 48px tall, content width with 24px side padding (about 180px), 24px from the bottom and right edges of the map, same pink plate and states (design re-review D10).
+- **Primary button** ("Remix this map"; the action is called "remix" everywhere — phone save button "Remix on my laptop", chip "made with zullumap · remix"): full width in the sheet, 48px tall, ink fill, on-ink 16px semibold text; pink plate offset 4px. Pressed/hover: plate slides to 0px (the plates come into register) over 120ms and the fill darkens to ink-pressed. Focus-visible: 2px pink plate ring offset 2px. Disabled: 40% opacity, no plate.
+- **Ownership on map pages (design re-review D5):** the template (`overlay.html`) owns the title label and legend styling; zullumap's viewer owns the attribution chip, bottom sheet, primary button and state messages, which no template can restyle.
+- **Title label (default):** used when a template does not style its own: sheet fill, 1px ink border, 12px/16px padding, Familjen 20px sentence case, top-left.
+- **Attribution chip:** "made with zullumap · remix" in 13px ink text on a small ≥85%-opaque sheet backing (accessibility rule D10), square corners, no border; dark variant on `chrome: dark` templates. The middle dot here is the one allowed separator.
 - **Bottom sheet:** sheet fill with grain, grab bar 32×4px ink at 40%, legend row, then the primary button.
 - **State messages:** one Atkinson sentence plus one action, set over the poster on an 85%-opaque sheet panel.
 
 ## Do's and Don'ts
 
 - Do keep chrome to one ink (blue) plus the pink plate; let maps own color.
-- Do use sentence case everywhere; titles never ALL CAPS, no dot separators.
+- Do use sentence case everywhere; titles never ALL CAPS, no dot separators in titles (the chip and gallery tile captions may use one middle dot).
 - Do use the overprint plate only on the primary action and focus rings.
 - Don't use rounded pills, drop shadows, glassmorphism or cards around map tiles.
 - Don't put pink or brand teal on text.
@@ -125,8 +129,8 @@ Square: 0px on buttons, labels and tiles; 2px only on the bottom sheet's top cor
 
 - **Approach:** intentional
 - **Easing:** enter(ease-out) exit(ease-out) move(ease-in-out)
-- **Duration:** micro 100ms (plate registration), short 200ms, medium 250ms (one ink pass), long 600ms (intro orbit easing)
-- **The one authored moment:** ink-pass loading — over the poster the map prints one ink at a time (teal → pink → coral → mustard, ~250ms each) with "Printing the pink layer…"; gallery tiles wait as single-ink blue halftones until scrolled into view. Under `prefers-reduced-motion`, inks appear at once.
+- **Duration:** micro 100ms (plate registration), short 200ms, medium 250ms (one ink pass), long 600ms (sheet and panel transitions); camera moves: 1.5s depth tilt after an ink-pass, 4s partial orbit for other templates, never both (design re-review D4)
+- **The one authored moment:** ink-pass loading, for templates that declare `loading: ink-pass` with their ink order (riso templates) — over the poster the map prints one ink at a time (teal → pink → coral → mustard, ~250ms each) with "Printing the pink layer…"; all other templates use a thin ink-colored progress bar over the poster; gallery tiles show each map's full-color poster until scrolled into view, then play (design re-review D3). Under `prefers-reduced-motion`, inks appear at once.
 
 ## Decisions Log
 
@@ -134,3 +138,4 @@ Square: 0px on buttons, labels and tiles; 2px only on the bottom sheet's top cor
 |------|----------|-----------|
 | 2026-11-20 | Initial design system created | Created by /design-consultation from the approved riso map mockup, the memorable thing "Maps can be this beautiful", and the approved template-page preview (5/5) |
 | 2026-11-20 | Primary button uses the body font at 16px | User feedback: the display-size button read as a title and crowded the sheet |
+| 2026-11-20 | The action is named "remix" everywhere ("Remix this map") | Design re-review D1: one verb across buttons, chip and CLI |
