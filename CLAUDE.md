@@ -10,3 +10,8 @@ cd ~/.claude/skills/gstack && ./setup --team
 
 Skills like /qa, /ship, /review and /browse become available after install.
 Use /browse for all web browsing (Aside first, the bundled gstack browser as fallback). Use ~/.claude/skills/gstack/... for gstack file paths.
+
+## Design System
+Read DESIGN.md before visual or UI work: it defines the fonts, colors, spacing, and
+aesthetic direction. Ask the user before departing from it. When reviewing or QA-ing
+UI, flag code that doesn't match DESIGN.md.
