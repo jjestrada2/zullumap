@@ -169,9 +169,9 @@ Wireframe (2D sketch from before the 3D revision; the map area becomes the inter
 
 Decisions from /plan-design-review; each line cites its decision.
 
-- **Template page hierarchy (design D1):** (1) the live 3D map fills the first screen with the template title and one "Remix this style" button; (2) the three remix steps; (3) "what your data needs" (slots) and "the agent may adjust" (rules); (4) community maps made with this template.
-- **Map page overlay layout (design D2):** desktop: title top-left, legend bottom-left, the remix button ("Make this map with your data", see approved mockup) bottom-right, credits and QR as one thin line along the bottom. Phones (<600 px): only the title stays on the map; legend, credits and the remix button move into a swipe-up bottom sheet (the button sits full-width under the legend), and the in-page QR is hidden (you can't scan your own screen).
-- **Loading and error states (design D3):** every map page shows a still poster image first, with a thin progress bar; the live 3D map fades in over it. The poster is a separate opening-view frame with no overlay saved by `trailer`, inlined as a size-capped `data:` JPEG (≤200 KB) and shown by a small inline bootstrap script that also owns the progress bar and failure messages, so they work even when the CDN runtime can't load (eng re-review), or a screenshot `render` takes only when `--poster` is passed (never based on what is installed, eng re-review D17); without either, the page shows a title card (template background + title + "Loading 3D map…") in its place (eng re-review D16). State table:
+- **Template page hierarchy (design D1):** (1) the live 3D map fills the first screen with the template title and one "Remix this map" button (design re-review D1); (2) the three remix steps; (3) "what your data needs" (slots) and "the agent may adjust" (rules); (4) community maps made with this template.
+- **Map page overlay layout (design D2):** desktop: title top-left, legend bottom-left, the "Remix this map" button bottom-right (design re-review D1), credits and QR as one thin line along the bottom. Phones (<600 px): only the title stays on the map; legend, credits and the remix button move into a swipe-up bottom sheet (the button sits full-width under the legend), and the in-page QR is hidden (you can't scan your own screen).
+- **Loading and error states (design D3):** every map page shows a still poster image first; templates that declare `loading: ink-pass` (with their ink order) then print the map one ink at a time (DESIGN.md motion), and every other template, plus anyone with reduced motion, gets a thin progress bar instead (design re-review D2); the live 3D map fades in over it. The poster is a separate opening-view frame with no overlay saved by `trailer`, inlined as a size-capped `data:` JPEG (≤200 KB) and shown by a small inline bootstrap script that also owns the progress bar and failure messages, so they work even when the CDN runtime can't load (eng re-review), or a screenshot `render` takes only when `--poster` is passed (never based on what is installed, eng re-review D17); without either, the page shows a title card (template background + title + "Loading 3D map…") in its place (eng re-review D16). State table:
 
   | Feature | Loading | Empty | Error | Success | Partial |
   |---|---|---|---|---|---|
@@ -180,7 +180,7 @@ Decisions from /plan-design-review; each line cites its decision.
   | Code-template demo (sandboxed) | poster + progress bar | n/a | "This template's effects couldn't start" over the poster | live demo | base map drawn, effects failed: same message as a small banner |
   | Community maps list | n/a | "No remixes yet — be the first" + the copyable remix command | n/a (built statically with the gallery) | list of maps | n/a |
 
-- **Phone remix path (design D4):** on phones (<600 px) the template page's remix area reads "Love this look? Make it yours on your laptop" with one button that opens the phone's share sheet (Web Share API; copy-link fallback) carrying the remix link; the `remix` command and agent prompt stay available, collapsed under "Remix now".
+- **Phone remix path (design D4):** on phones (<600 px) the template page's remix area reads "Love this look? Remix it on your laptop" with one "Remix on my laptop" button that opens the phone's share sheet (Web Share API; copy-link fallback) carrying the remix link; the `remix` command and agent prompt stay available, collapsed under "Remix now".
 - **Journey storyboard:**
 
   | Step | User does | User feels | Plan specifies? |
@@ -200,8 +200,16 @@ Decisions from /plan-design-review; each line cites its decision.
 - **Touch and gestures (design D9):** maps embedded in scrolling pages (template page first screen, gallery) ignore swipes until tapped ("Tap to explore" hint; tap outside or scroll to release), so page scrolling never gets trapped; full-page map pages are interactive immediately. Gestures: one finger pans; two fingers pinch-zoom, rotate and tilt; on laptops drag pans and right-drag or Ctrl+drag rotates and tilts.
 - **Accessibility (design D10):** overlay text always sits on a solid or semi-opaque backing with at least 4.5:1 contrast, verified by `check` against each test render; body text at least 16 px; touch targets at least 44 px. With `prefers-reduced-motion`, maps never auto-orbit and show the static opening view. Keyboard: Tab reaches overlay controls with visible focus rings; once the map itself has focus, arrow keys pan and +/- zoom (keys never act on an unfocused map, so page scrolling is never hijacked). Each map page includes a screen-reader text summary: title, what colors and heights mean, min/max and class ranges, and a top-5 list defined per geometry: polygons and points list the top 5 features by the value slot, lines and arcs list the top 5 flows by value (named from the label slot when mapped; the list is left out otherwise). Overlay backings must be at least 85% opaque so `check` can compute contrast from computed styles, independent of the moving map underneath (eng re-review).
 - **3D legend (design D11):** the overlay contract's legend shows the color classes, a small height key (low and high with values) whenever a height slot is used, and a "no data" swatch whenever any values are missing.
-- **Opening motion (design D12):** after the live map loads, the camera makes one slow ~6-second partial orbit along the template's camera path, then rests at the opening view; any touch, click or key stops it immediately, and it never runs under `prefers-reduced-motion` (D10).
-- **Approved map page mockup (design-shotgun, 2026-11-20):** `~/.gstack/projects/jjestrada2-zullumap/designs/map-page-phone-v2-20261120/variant-A4.png`. Direction: Riso Paper palette (teal → pink → coral → mustard) on grainy off-white paper, higher ~35° view with exaggerated extrusions, compact title label top-left, chip top-right, legend in the collapsed bottom sheet. Notes from the review: the title keeps its compact top-left label but uses a different typeface in sentence case (no ALL CAPS, no dots between words); the remix action is a full-width button under the legend reading "Make this map with your data" (from variant `variant-D-R2.png`), also in sentence case. The typeface is chosen in `/design-consultation` (design D8). Rejected: the inline "Use this style →" pill and the round remix icon.
+- **Opening motion (design D12, revised by design re-review D4):** one motion moment per page. Templates with `loading: ink-pass` end their print with a single gentle 1.5-second tilt that shows depth, then rest (no orbit); all other templates make one ~4-second partial orbit along the camera path after the progress bar, then rest at the opening view; any touch, click or key stops it immediately, and it never runs under `prefers-reduced-motion` (D10).
+- **Approved map page mockup (design-shotgun, 2026-11-20):** `~/.gstack/projects/jjestrada2-zullumap/designs/map-page-phone-v2-20261120/variant-A4.png`. Direction: Riso Paper palette (teal → pink → coral → mustard) on grainy off-white paper, higher ~35° view with exaggerated extrusions, compact title label top-left, chip top-right, legend in the collapsed bottom sheet. Notes from the review: the title keeps its compact top-left label but uses a different typeface in sentence case (no ALL CAPS, no dots between words); the remix action is a full-width button under the legend (from variant `variant-D-R2.png`), in sentence case, labeled "Remix this map" (design re-review D1 replaced the earlier "Make this map with your data"). The typeface is chosen in `/design-consultation` (design D8). Rejected: the inline "Use this style →" pill and the round remix icon.
+- **Who styles what on map pages (design re-review D5):** the template's `overlay.html` owns the title label and legend styling; zullumap's viewer owns the attribution chip, bottom sheet, "Remix this map" button and state messages, which templates can't restyle. Viewer-owned parts use DESIGN.md's light chrome, or its dark variant (`sheet-dark` #1C2233 with paper-colored text, same pink plate) when the template declares `chrome: dark`. Templates that don't style a title get DESIGN.md's default title label.
+- **Phone template-page button (design re-review D6):** on phones, the first-screen "Remix this map" button opens the share sheet with the remix link directly; the lower remix block becomes a short note plus the collapsed `remix` command, with no duplicate button.
+- **CLI success and first run (design re-review D7):** a successful `render`/`remix` opens the map in the browser (skipped with `--no-open` or when output isn't an interactive terminal) and prints three lines: where the page is saved, the next step ("Make a trailer: zullumap trailer ./my-map"), and the remix link. The first `trailer` run prints "Setting up video tools (one time, ~150 MB)…" with a progress bar. Unsupported files (e.g. shapefiles) get: "zullumap reads GeoJSON or CSV. Convert with: ogr2ogr -f GeoJSON out.geojson in.shp".
+- **Gallery home first screen (design re-review D8):** top-left a small "zullumap" wordmark, the headline "Maps can be this beautiful" (Familjen, display size) and one line "Map templates you can remix with your own data"; the trailer wall starts right below, and on phones the first tile peeks into the first screen.
+- **More states (design re-review D9):** template page without a `#r=` link shows the template's default look; copy buttons change to "Copied" for 2 s, and if copying fails the text is selected with "Press Ctrl/Cmd+C"; a cancelled share sheet does nothing; a trailer tile whose video fails keeps its poster with no error text; a gallery with one template shows it full-width plus "More templates are coming — publish your own"; the collapsed phone bottom sheet peeks 72 px (grab bar + one legend row) and never covers the top-right chip, and the title stays visible above it.
+- **Desktop remix button (design re-review D10):** on screens ≥600 px, "Remix this map" is 48 px tall, content width with 24 px side padding (about 180 px), placed 24 px from the bottom and right edges, with the same pink plate.
+- **Trailer on the template page (design re-review D11):** the muted looping trailer sits in the remix section, under the three remix steps, with "Download trailer" and "Copy link" actions; the first screen stays the live map.
+- **Map-page remix panel (design re-review D12):** tapping "Remix this map" on a map page opens a panel (bottom sheet on phones, side panel on desktop) titled "Remix this map" with the agent prompt and the `zullumap remix <this map's link>` command, each with a Copy button, "What your data needs" in one line, and "See the template →"; on phones the panel leads with "Remix on my laptop" (share sheet).
 
 ## Open Questions
 
@@ -1532,17 +1540,61 @@ Synthesized from this review's findings. Each task derives from a specific findi
 - Parallelization: unchanged (4 lanes); T11–T13 join the viewer/cli lanes, T14 the gallery lane
 - Lake Score: 3/3 = answers picking a 10/10-leaning recommended option / answers scored
 
+# Design re-review (/plan-design-review, 2026-11-20, against DESIGN.md)
+
+Target: docs/designs/agent-first-map-templates.md, checked against DESIGN.md. No new mockups (user chose to reuse the approved map-page and design-system mockups). Outside voice: one native Claude design subagent ([single-model]; Codex not installed) — 12 findings, no hard rejections.
+
+Decisions (each asked individually):
+- **design re-review D1:** the action is called "remix" everywhere: "Remix this map" buttons, chip "made with zullumap · remix", phone save button "Remix on my laptop" (replaces "Make this map with your data").
+- **design re-review D2:** ink-pass loading only for templates that declare `loading: ink-pass`; all others and reduced motion get the poster + thin progress bar.
+- **design re-review D3:** gallery tiles show each map's full-color poster until scrolled into view (DESIGN.md's blue-halftone idea dropped).
+- **design re-review D4:** one motion moment per page: ink-pass maps end with a 1.5 s depth tilt and no orbit; other templates make one ~4 s partial orbit; any input or reduced motion stops it.
+- **design re-review D5:** templates own title and legend styling; the viewer owns chip, bottom sheet, button and messages, with a dark variant for `chrome: dark` templates.
+Factual correction applied without a question: DESIGN.md's chip wording now matches accessibility rule D10 (≥85% backing) and allows the middle dot only in the chip and tile captions.
+
+## Design Re-review Completion Summary
+
+```
+  +====================================================================+
+  |         DESIGN PLAN REVIEW — COMPLETION SUMMARY (re-review)        |
+  +====================================================================+
+  | System Audit         | DESIGN.md present (spec format); UI: map    |
+  |                      | page, template page, gallery, trailer, CLI  |
+  | Step 0               | 7/10 initial; focus: conflicts, then gaps   |
+  | Pass 1  (Info Arch)  | 8/10 → 9/10 (gallery home + trailer slot)   |
+  | Pass 2  (States)     | 9/10 → 9/10 (five extra states defined)     |
+  | Pass 3  (Journey)    | 9/10 → 9/10 (CLI success + phone remix)     |
+  | Pass 4  (AI Slop)    | 8/10 → 9/10 (no hard rejections)            |
+  | Pass 5  (Design Sys) | 5/10 → 9/10 (DESIGN.md + 5 conflicts fixed) |
+  | Pass 6  (Responsive) | 9/10 → 9/10 (desktop button + 72 px peek)   |
+  | Pass 7  (Decisions)  | 12 resolved, 0 deferred                     |
+  +--------------------------------------------------------------------+
+  | NOT in scope         | new mockups skipped by choice               |
+  | What already exists  | DESIGN.md, approved mockups (map page, system)|
+  | TODOS.md updates     | 0 items proposed                             |
+  | Approved Mockups     | 0 generated this round                       |
+  | Decisions made       | 12 added to plan (D1–D12)                    |
+  | Decisions deferred   | 0                                            |
+  | Overall design score | 7/10 → 9/10                                  |
+  +====================================================================+
+```
+
+Plan is design-complete. Run /design-review after implementation for visual QA.
+
+### Unresolved Decisions
+None.
+
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
-| Outside Review | codex not installed; native Claude subagents | Independent 2nd opinion | 3 | unavailable (native fallbacks completed) | eng: 11 + 11 findings; design: 9 findings — all routed into decisions or required work |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | ISSUES OPEN | 12 issues, 0 critical gaps (re-review); mapped to T11–T15 |
-| Design Review | `/plan-design-review` | UI/UX gaps | 1 | ISSUES OPEN | score: 1/10 → 5/10, 12 decisions |
+| Outside Review | codex not installed; native Claude subagents | Independent 2nd opinion | 4 | unavailable (native fallbacks completed) | eng: 11 + 11; design: 9 + 12 findings, all routed into decisions |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | ISSUES OPEN | 12 issues, 0 critical gaps (re-review); mapped to T1–T15 |
+| Design Review | `/plan-design-review` | UI/UX gaps | 2 | CLEAR | score: 7/10 → 9/10, 12 decisions (re-review) |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
 
-- **OUTSIDE COVERAGE:** codex — plan-review (2 runs) and design phases — unavailable (CLI not installed); native Claude subagents completed every phase ([single-model]). No external-provider coverage.
-- **VERDICT:** No review CLEAR yet; all findings are decided and mapped to tasks (eng T1–T15, design DT1–DT11) — eng review required (issues_open).
+- **OUTSIDE COVERAGE:** codex — plan-review and design phases — unavailable (CLI not installed); native Claude subagents completed every phase ([single-model]). No external-provider coverage.
+- **VERDICT:** DESIGN CLEARED (9/10, no open decisions); eng findings map to tasks T1–T15 — eng review required (issues_open).
 
 NO UNRESOLVED DECISIONS
