@@ -42,7 +42,7 @@ describe('render', () => {
     const recipe = JSON.parse(readFileSync(join(o.out, 'recipe.json'), 'utf8'));
     expect(recipe).toMatchObject({
       template: { id: 'risograph-choropleth', version: '1.0.0', author: 'Juan Estrada', license: 'CC-BY-4.0' },
-      coreMajor: 0, choices: { method: 'quantile', classCount: 4, heightScale: 3000, pitch: 50 },
+      coreMajor: 0, choices: { method: 'quantile', classCount: 4, heightScale: 0.12, pitch: 50 },
       mapping: { value: 'pop' }, title: 'Density in Bogotá',
     });
     expect(JSON.stringify(recipe)).not.toContain(tmpdir());

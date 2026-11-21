@@ -1,5 +1,6 @@
 import { classify, type ClassMethod } from './classify';
 import { prepareData } from './data';
+import { extentMeters } from './extent';
 import { resampleRamp, type RGB } from './helpers';
 import { manifestSchema, validateTemplate, type TemplateManifest } from './template';
 
@@ -65,6 +66,8 @@ export function compile(input: CompileInput): CompileResult {
     properties: { ...(f.properties ?? {}), __zm: Object.fromEntries(numeric.map(n => [n.slot, prepared.values[n.slot]![i] ?? null])) },
   }));
 
+  // Height scale is the tallest feature's height as a share of the data's width, so it fits any extent.
+  const widthM = extentMeters({ features });
   let legend: CompileResult['legend'] = null;
   let heightKey: Legend['height'];
   const deck = mapStrings(structuredClone(input.deck), (value, key) => {
@@ -81,7 +84,7 @@ export function compile(input: CompileInput): CompileResult {
     }
     if (NUMBER_PROPS.has(key)) {
       heightKey ??= { slot, low: Math.min(...vals), high: Math.max(...vals) };
-      return { '@@function': 'zmHeight', slot, max: Math.max(...vals), scale: choices.heightScale ?? 1 };
+      return { '@@function': 'zmHeight', slot, max: Math.max(...vals), scale: (choices.heightScale ?? 0) * widthM };
     }
     throw new Error(`Slot "${slot}" is used in ${key}, which zullumap can't drive from data yet`);
   }) as CompileResult['deck'];

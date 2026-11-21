@@ -5,7 +5,7 @@ import { JSONConverter, JSONConfiguration } from '@deck.gl/json';
 import { ArcLayer, ColumnLayer, GeoJsonLayer, PathLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { accessorHelpers } from '@zullumap/core/src/helpers';
-import { cameraAt, type Camera } from './camera';
+import { cameraAt, openingCamera, type Camera } from './camera';
 import { attributionNodes, mountChrome } from './chrome';
 import { mountEndCard } from './endcard';
 import { featuresThroughStep, inkSteps, openingMotion, INK_STEP_MS, ORBIT_MS, TILT_MS } from './motion';
@@ -18,10 +18,10 @@ declare global { interface Window { __zmBoot?: Boot; zullumap?: unknown } }
 
 const PHONE = '(max-width: 599px)';
 const PHONE_CHIP_STRIP = 52;
-const OPEN_BEARING = -15;
 const ORBIT_SWEEP = 30;
 const TILT_FROM = 15;
 const PAPER = '#E9E5DC';
+const WORLD_FRAME_LAT = 78;
 /** `?zm-capture`: trailer recording. Camera is driven frame by frame and the overlay sits inside LinkedIn's safe zones (design D5). */
 const CAPTURE = new URLSearchParams(location.search).has('zm-capture');
 /** LinkedIn covers the top 8% and bottom 15% of a 4:5 video with buttons and the caption (design D5). */
@@ -74,19 +74,32 @@ function start() {
   const motion = CAPTURE ? { print: false, camera: 'none' as const }
     : openingMotion({ loading: payload.manifest.loading, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
   const { rules } = payload.manifest;
-  const pitch = payload.choices.pitch ?? rules.pitch.default ?? rules.pitch.min;
+  const bounds = bbox(payload.features);
+  const cam = openingCamera({ lonSpan: bounds[1][0] - bounds[0][0], pitch: payload.choices.pitch ?? rules.pitch.default ?? rules.pitch.min, rules });
+  const { pitch, bearing: OPEN_BEARING } = cam;
+  // MapLibre's default limits make the world fill the screen both ways, which crops a world map (to one ocean
+  // on a phone). World maps get limits that only keep the centre on the map, so the whole world can fit.
+  const worldMap = cam.sweep === 0;
+  // Mercator balloons the poles, so world maps are framed on 78°S–78°N; polar land runs off the edge as on most world maps.
+  const frame: typeof bounds = worldMap
+    ? [[bounds[0][0], Math.max(bounds[0][1], -WORLD_FRAME_LAT)], [bounds[1][0], Math.min(bounds[1][1], WORLD_FRAME_LAT)]]
+    : bounds;
   const startPitch = motion.camera === 'tilt' ? Math.max(rules.pitch.min, pitch - TILT_FROM) : pitch;
-  const startBearing = motion.camera === 'orbit' ? OPEN_BEARING - ORBIT_SWEEP : OPEN_BEARING;
+  const startBearing = motion.camera === 'orbit' && cam.sweep ? OPEN_BEARING - ORBIT_SWEEP : OPEN_BEARING;
 
   const map = new maplibregl.Map({
     container: 'zm-map',
     style: (payload.basemap ?? { version: 8, sources: {}, layers: [{ id: 'paper', type: 'background', paint: { 'background-color': PAPER } }] }) as maplibregl.StyleSpecification,
-    bounds: bbox(payload.features),
-    fitBoundsOptions: { padding: fitPadding(phone.matches, overlayRoot), pitch: startPitch, bearing: startBearing },
+    bounds: frame,
+    // Fit at the view the motion ends on, so the data is fully in view when the camera comes to rest.
+    fitBoundsOptions: { padding: fitPadding(phone.matches, overlayRoot), pitch, bearing: OPEN_BEARING },
     minZoom: rules.zoom.min, maxZoom: rules.zoom.max, maxPitch: Math.max(rules.pitch.max, pitch),
     attributionControl: false,
+    renderWorldCopies: false, // show the data once, even for world maps
+    transformConstrain: worldMap ? keepCentreOnMap : null,
     canvasContextAttributes: { preserveDrawingBuffer: CAPTURE },
   });
+  if (startPitch !== pitch || startBearing !== OPEN_BEARING) map.jumpTo({ pitch: startPitch, bearing: startBearing });
   map.getCanvas().setAttribute('aria-label', `3D map: ${payload.title}. Arrow keys pan, plus and minus zoom.`);
   map.on('webglcontextlost', () => boot?.fail('webgl'));
 
@@ -116,7 +129,7 @@ function start() {
         const wait = () => (deckDraws > before ? requestAnimationFrame(() => resolve()) : requestAnimationFrame(wait));
         wait();
       });
-      map.jumpTo(cameraAt(t, openView, { maxPitch: map.getMaxPitch(), maxZoom: map.getMaxZoom() }));
+      map.jumpTo(cameraAt(t, openView, { maxPitch: map.getMaxPitch(), maxZoom: map.getMaxZoom() }, cam.sweep));
       map.triggerRepaint();
     }),
     /** Trailer poster: hide the overlay and zullumap's chrome to save a clean opening view. */
@@ -136,7 +149,7 @@ function start() {
   api.ready = new Promise<void>(resolve => {
     map.once('load', () => {
       chrome.setCredits(credits(payload, map));
-      if (CAPTURE) frameForTrailer(map, bbox(payload.features), overlayRoot);
+      if (CAPTURE) frameForTrailer(map, frame, overlayRoot);
       const c = map.getCenter();
       openView = { center: [c.lng, c.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
       map.once('idle', () => requestAnimationFrame(() => {
@@ -184,6 +197,12 @@ function frameForTrailer(map: maplibregl.Map, bounds: [[number, number], [number
     .filter((c): c is NonNullable<typeof c> => Boolean(c))
     .sort((a, b) => (b.zoom ?? 0) - (a.zoom ?? 0))[0];
   if (best) map.jumpTo({ ...best, ...opts });
+}
+
+/** Camera limits for world maps: centre stays within the map; zoom is limited only by minZoom/maxZoom. */
+function keepCentreOnMap(lngLat: maplibregl.LngLat, zoom: number) {
+  const lng = Math.max(-180, Math.min(180, lngLat.lng)), lat = Math.max(-85, Math.min(85, lngLat.lat));
+  return { center: new maplibregl.LngLat(lng, lat), zoom };
 }
 
 function fitPadding(phone: boolean, overlay: ShadowRoot) {

@@ -18,6 +18,7 @@ export const manifestSchema = z.object({
   rules: z.object({
     classMethods: z.array(z.enum(['quantile', 'equal', 'natural'])).min(1),
     classCount: range,
+    /** Tallest feature's height as a share of the data's width (0.12 = 12%); the same look at any extent. */
     heightScale: range.optional(),
     zoom: range,
     pitch: range,

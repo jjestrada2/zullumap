@@ -6,3 +6,4 @@ export { accessorHelpers, resampleRamp, NO_DATA_COLOR, type RGB } from './helper
 export { encodeRecipeLink, decodeRecipeLink, CORE_MAJOR, MAX_LINK_LENGTH, type RecipeChoices, type TemplateRef } from './recipe';
 export { renderOverlay, legendRows, overlayPlaceholders, escapeHtml, formatNumber, rgbCss, type OverlayValues, type LegendRow } from './overlay';
 export { serializeJsonBlock } from './inline';
+export { extentMeters } from './extent';

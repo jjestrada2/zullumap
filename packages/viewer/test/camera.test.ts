@@ -27,3 +27,25 @@ describe('trailer camera path', () => {
     expect(cameraAt(1, open, limits).pitch).toBeCloseTo(open.pitch);
   });
 });
+
+describe('opening camera by extent', async () => {
+  const { openingCamera } = await import('../src/camera');
+  const rules = { pitch: { min: 0, max: 70 } };
+
+  test('city and regional data: angled view, trailer orbits', () => {
+    expect(openingCamera({ lonSpan: 0.3, pitch: 50, rules })).toEqual({ bearing: -15, pitch: 50, sweep: PATH_BEARING_SWEEP });
+  });
+
+  test('data spanning the globe: north-up, pitch at most 40°, no orbit (a rotated world leaves the screen)', () => {
+    expect(openingCamera({ lonSpan: 360, pitch: 50, rules })).toEqual({ bearing: 0, pitch: 40, sweep: 0 });
+    expect(openingCamera({ lonSpan: 300, pitch: 30, rules })).toEqual({ bearing: 0, pitch: 30, sweep: 0 });
+  });
+
+  test('never goes below the template minimum pitch', () => {
+    expect(openingCamera({ lonSpan: 360, pitch: 60, rules: { pitch: { min: 45, max: 70 } } }).pitch).toBe(45);
+  });
+});
+
+test('cameraAt can hold the bearing still for world maps', () => {
+  expect(cameraAt(0.7, open, limits, 0).bearing).toBe(open.bearing);
+});

@@ -16,7 +16,7 @@ const manifest = {
   rules: {
     classMethods: ['quantile', 'natural'],
     classCount: { min: 3, max: 7, default: 5 },
-    heightScale: { min: 0, max: 5000, default: 3000 },
+    heightScale: { min: 0, max: 0.5, default: 0.12 },
     zoom: { min: 3, max: 16 },
     pitch: { min: 0, max: 70, default: 50 },
   },

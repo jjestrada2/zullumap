@@ -8,7 +8,7 @@ export const manifest = {
   rules: {
     classMethods: ['quantile', 'natural'],
     classCount: { min: 2, max: 7, default: 4 },
-    heightScale: { min: 0, max: 5000, default: 3000 },
+    heightScale: { min: 0, max: 0.5, default: 0.12 },
     zoom: { min: 3, max: 16 }, pitch: { min: 0, max: 70, default: 50 },
   },
   ramp: ['#2499A6', '#F49AA8', '#E95E5A', '#E9B24F'],

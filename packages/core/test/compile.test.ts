@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { compile } from '../src/compile';
 import { accessorHelpers } from '../src/helpers';
+import { extentMeters } from '../src/extent';
 
 const manifest = {
   id: 'risograph-choropleth', version: '1.0.0', author: 'juan', license: 'CC-BY-4.0',
@@ -10,7 +11,7 @@ const manifest = {
   rules: {
     classMethods: ['quantile', 'natural'],
     classCount: { min: 2, max: 7, default: 4 },
-    heightScale: { min: 0, max: 5000, default: 3000 },
+    heightScale: { min: 0, max: 0.5, default: 0.12 },
     zoom: { min: 3, max: 16 }, pitch: { min: 0, max: 70, default: 50 },
   },
   ramp: ['#2499A6', '#F49AA8', '#E95E5A', '#E9B24F'],
@@ -34,9 +35,18 @@ describe('compile', () => {
     expect(fill.colors).toHaveLength(4);
   });
 
-  test('replaces the height slot with a zmHeight helper reference using the default scale', () => {
+  test('replaces the height slot with a zmHeight helper whose scale is the default share of the data width', () => {
     const elev = (compile(base).deck.layers[0] as Record<string, any>).getElevation;
-    expect(elev).toEqual({ '@@function': 'zmHeight', slot: 'height', max: 80, scale: 3000 });
+    const width = extentMeters(data);
+    expect(elev).toMatchObject({ '@@function': 'zmHeight', slot: 'height', max: 80 });
+    expect(elev.scale).toBeCloseTo(0.12 * width, 6);
+  });
+
+  test('the tallest feature is the same share of the map whether the data covers a city or a continent', () => {
+    const wide = structuredClone(data);
+    for (const f of wide.features) for (const p of f.geometry.coordinates[0]!) p[0] = -74 + (p[0]! + 74) * 100;
+    const scale = (d: unknown) => (compile({ ...base, data: d }).deck.layers[0] as Record<string, any>).getElevation.scale;
+    expect(scale(wide) / scale(data)).toBeCloseTo(100, 0);
   });
 
   test('keeps non-slot props unchanged', () => {
@@ -56,7 +66,7 @@ describe('compile', () => {
   test('returns the legend and the resolved choices', () => {
     const r = compile(base);
     expect(r.legend).toMatchObject({ classCount: 4, breaks: [2, 4, 6] });
-    expect(r.choices).toEqual({ method: 'quantile', classCount: 4, heightScale: 3000, pitch: 50 });
+    expect(r.choices).toEqual({ method: 'quantile', classCount: 4, heightScale: 0.12, pitch: 50 });
   });
 
   test('applies overrides that respect the template rules', () => {
@@ -121,6 +131,19 @@ describe('compile legend for the overlay (design D11)', () => {
 describe('defaultChoices', () => {
   test('gives the choices a map gets with no overrides, used to keep remix links short', async () => {
     const { defaultChoices } = await import('../src/compile');
-    expect(defaultChoices(manifest)).toEqual({ method: 'quantile', classCount: 4, heightScale: 3000, pitch: 50 });
+    expect(defaultChoices(manifest)).toEqual({ method: 'quantile', classCount: 4, heightScale: 0.12, pitch: 50 });
+  });
+});
+
+describe('extentMeters', () => {
+  const box = (w: number, s: number, e: number, n: number) => ({ type: 'FeatureCollection', features: [
+    { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] } }] });
+
+  test('is the wider side of the data bounds, in meters', () => {
+    expect(extentMeters(box(0, 0, 1, 0.5)) / 1000).toBeCloseTo(111.3, 0); // 1° of longitude at the equator
+  });
+
+  test('a world dataset spans about 40,000 km', () => {
+    expect(extentMeters(box(-180, -90, 180, 84)) / 1e6).toBeGreaterThan(35);
   });
 });
