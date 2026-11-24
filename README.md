@@ -42,6 +42,19 @@ optional) and `label` (text, optional). `--options choices.json` overrides class
 height scale or pitch within the template's rules; `--no-recipe` leaves out the remix link.
 `examples/bogota-grid.geojson` is synthetic data for trying templates, not real population.
 
+## Template pages
+
+Every remix link and trailer QR points to a template page: the live 3D demo with the link's choices, the remix
+steps, what the data needs and what the agent may adjust. Build the static site (`site/`) and preview it:
+
+```bash
+npm run site
+npx serve site
+```
+
+Then open `/t/risograph-choropleth/`. Pages are built for the `/zullumap` path of a GitHub Pages project site,
+so locally use a server that maps `/zullumap` to `site/`, or build with `--base ""`.
+
 ## Develop
 
 ```bash

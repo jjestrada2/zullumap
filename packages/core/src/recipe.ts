@@ -1,10 +1,11 @@
-import { z } from 'zod';
 import type { ClassMethod } from './classify';
 
 /** Major version of core's classification formulas; bump only when results would change (design D13). */
 export const CORE_MAJOR = 0;
 /** QR code budget: version 6 at error-correction level M (design D12). */
 export const MAX_LINK_LENGTH = 100;
+/** Gallery host for remix links in the 2026 preview (GitHub Pages). */
+export const GALLERY_HOST = 'https://jjestrada2.github.io/zullumap';
 
 export interface RecipeChoices { method?: ClassMethod; classCount?: number; heightScale?: number; pitch?: number }
 export interface TemplateRef { id: string; version: string }
@@ -44,11 +45,19 @@ export function decodeRecipeLink(link: string, opts: { acceptedHosts: string[] }
   if (!host || !t) {
     throw new Error('Unsupported input: pass a zullumap map page, a recipe link or a map page URL');
   }
-  const m = FRAGMENT_RE.exec(fragment.replace(/^r=/, ''));
-  if (!fragment.startsWith('r=') || !m) {
-    throw new Error("This remix link is damaged; showing the template's default look instead");
-  }
-  const coreMajor = Number(m[1]);
+  const { coreMajor, choices } = decodeRecipeFragment(fragment);
+  const warnings = coreMajor === CORE_MAJOR ? [] : [
+    `This link was made with zullumap core version ${coreMajor}.x; you have ${CORE_MAJOR}.x, so class breaks may differ slightly`,
+  ];
+  return { template: { id: t[1]!, version: t[2]! }, choices, coreMajor, warnings };
+}
+
+
+/** Decode the part of a remix link after `#` (e.g. `#r=0;mn;c5`). Used by the template page in the browser. */
+export function decodeRecipeFragment(fragment: string): { coreMajor: number; choices: RecipeChoices } {
+  const f = fragment.replace(/^#/, '');
+  const m = FRAGMENT_RE.exec(f.replace(/^r=/, ''));
+  if (!f.startsWith('r=') || !m) throw new Error("This remix link is damaged; showing the template's default look instead");
   const choices: RecipeChoices = {};
   for (const part of m[2]!.split(';').filter(Boolean)) {
     const key = part[0], val = part.slice(1);
@@ -60,23 +69,5 @@ export function decodeRecipeLink(link: string, opts: { acceptedHosts: string[] }
     else if (key === 'h') choices.heightScale = Number(val);
     else if (key === 'p') choices.pitch = Number(val);
   }
-  const warnings = coreMajor === CORE_MAJOR ? [] : [
-    `This link was made with zullumap core version ${coreMajor}.x; you have ${CORE_MAJOR}.x, so class breaks may differ slightly`,
-  ];
-  return { template: { id: t[1]!, version: t[2]! }, choices, coreMajor, warnings };
+  return { coreMajor: Number(m[1]), choices };
 }
-
-/** recipe.json written next to every map page (design: "recipe.json and privacy"). Never holds file paths. */
-export const recipeFileSchema = z.object({
-  template: z.object({ id: z.string(), version: z.string(), author: z.string().optional(), license: z.string().optional() }),
-  coreMajor: z.number().int().nonnegative(),
-  choices: z.object({
-    method: z.enum(['quantile', 'equal', 'natural']), classCount: z.number().int().positive(),
-    heightScale: z.number().optional(), pitch: z.number().optional(),
-  }),
-  mapping: z.record(z.string(), z.string()),
-  title: z.string(),
-  link: z.string().optional(),
-  basemapAttribution: z.array(z.string()).optional(),
-});
-export type RecipeFile = z.infer<typeof recipeFileSchema>;

@@ -1,11 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
-import { compile, defaultChoices, encodeRecipeLink, manifestSchema, validateTemplate, CORE_MAJOR } from '@zullumap/core';
+import { compile, defaultChoices, encodeRecipeLink, GALLERY_HOST, manifestSchema, validateTemplate, CORE_MAJOR } from '@zullumap/core';
 import { buildPage, type PageAssets } from '@zullumap/viewer/src/page';
 import type { RenderArgs } from './args';
 
-/** Gallery host for remix links in the 2026 preview (GitHub Pages). */
-export const GALLERY_HOST = 'https://jjestrada2.github.io/zullumap';
+export { GALLERY_HOST } from '@zullumap/core';
 const LARGE_DATA_BYTES = 20 * 1024 * 1024;
 
 export type RenderOptions = Omit<RenderArgs, 'open' | 'options'> & {

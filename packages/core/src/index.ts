@@ -3,7 +3,8 @@ export { prepareData, type DataSpec, type NumericSlot, type PreparedData, type S
 export { manifestSchema, validateTemplate, type TemplateManifest, type TemplateFiles, type ValidationResult } from './template';
 export { compile, defaultChoices, type CompileInput, type CompileResult, type Choices, type Legend } from './compile';
 export { accessorHelpers, resampleRamp, NO_DATA_COLOR, type RGB } from './helpers';
-export { encodeRecipeLink, decodeRecipeLink, recipeFileSchema, CORE_MAJOR, MAX_LINK_LENGTH, type RecipeChoices, type RecipeFile, type TemplateRef } from './recipe';
+export { encodeRecipeLink, decodeRecipeLink, decodeRecipeFragment, CORE_MAJOR, GALLERY_HOST, MAX_LINK_LENGTH, type RecipeChoices, type TemplateRef } from './recipe';
+export { recipeFileSchema, type RecipeFile } from './recipe-file';
 export { renderOverlay, legendRows, overlayPlaceholders, escapeHtml, formatNumber, rgbCss, type OverlayValues, type LegendRow } from './overlay';
 export { serializeJsonBlock } from './inline';
 export { extentMeters } from './extent';

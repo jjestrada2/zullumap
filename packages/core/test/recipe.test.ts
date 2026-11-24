@@ -51,3 +51,18 @@ describe('recipe link', () => {
     expect(decodeRecipeLink(link, { acceptedHosts: [GALLERY] }).warnings.join(' ')).toMatch(/version/i);
   });
 });
+
+describe('decodeRecipeFragment (template page, in the browser)', async () => {
+  const { decodeRecipeFragment } = await import('../src/recipe');
+
+  test('reads the choices from the part after #', () => {
+    expect(decodeRecipeFragment('#r=0;mn;c5;h0.2;p60')).toEqual({ coreMajor: 0, choices: { method: 'natural', classCount: 5, heightScale: 0.2, pitch: 60 } });
+    expect(decodeRecipeFragment('r=0')).toEqual({ coreMajor: 0, choices: {} });
+  });
+
+  test('reports a damaged fragment', () => {
+    expect(() => decodeRecipeFragment('#r=%%%')).toThrow(/damaged/);
+    expect(() => decodeRecipeFragment('#r=0;mx')).toThrow(/damaged/);
+    expect(() => decodeRecipeFragment('#hello')).toThrow(/damaged/);
+  });
+});

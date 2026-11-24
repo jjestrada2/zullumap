@@ -118,8 +118,16 @@ function start() {
   const deck = new MapboxOverlay({ interleaved: true, layers: steps.length ? layersAtStep(-1) : layers, onAfterRender: () => { deckDraws++; } });
   map.addControl(deck as unknown as maplibregl.IControl);
 
+  // Demo maps embedded in a scrolling page ignore gestures until tapped, so page scrolling never gets trapped (design D9).
+  const handlers = [map.dragPan, map.scrollZoom, map.boxZoom, map.dragRotate, map.keyboard, map.doubleClickZoom, map.touchZoomRotate, map.touchPitch];
+  const explore = (on: boolean) => {
+    for (const h of handlers) on ? h.enable() : h.disable();
+    api.interactive = on;
+    chrome.setExploreHint(on ? null : (matchMedia('(hover: hover)').matches ? 'Click to explore' : 'Tap to explore'), () => explore(true));
+  };
+
   const api = {
-    map, deck, isReady: false, motionDone: false,
+    map, deck, isReady: false, motionDone: false, interactive: true,
     stopMotion: () => { cancelled = true; map.stop(); },
     ready: null as unknown as Promise<void>,
     /** Trailer: move the camera to time t (0..1) along the fly-through and resolve once the frame is fully drawn. */
@@ -145,6 +153,12 @@ function start() {
     addEventListener(type, () => { if (!api.motionDone) api.stopMotion(); }, { capture: true, passive: true });
   }
   window.zullumap = api;
+  if (payload.demo) {
+    explore(false);
+    map.getCanvasContainer().addEventListener('pointerdown', () => { if (!api.interactive) explore(true); });
+    addEventListener('blur', () => explore(false)); // tapped or clicked outside the demo
+    addEventListener('message', e => { if ((e.data as { zm?: string } | null)?.zm === 'release') explore(false); }); // the page scrolled
+  }
 
   api.ready = new Promise<void>(resolve => {
     map.once('load', () => {

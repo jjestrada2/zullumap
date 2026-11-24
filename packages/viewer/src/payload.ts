@@ -16,6 +16,8 @@ export interface PagePayload {
   basemap: Record<string, unknown> | null;
   /** Remix link; null with --no-recipe. */
   recipe: { link: string } | null;
+  /** Live demo embedded in a template page: no chip or remix button, and the map waits for a tap (design D9). */
+  demo?: boolean;
 }
 
 export const PAYLOAD_ID = 'zm-page';
