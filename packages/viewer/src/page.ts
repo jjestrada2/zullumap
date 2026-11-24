@@ -28,8 +28,15 @@ const FONTS = 'https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Ne
 export function buildPage(input: PageInput, assets: PageAssets): string {
   const m = manifestSchema.parse(input.manifest);
   if (input.poster !== undefined) checkPoster(input.poster);
-  const { compiled } = input;
+  const payload = makePayload(input);
 
+  return pageHtml({ title: input.title, chrome: m.chrome, poster: input.poster, payload: serializeJsonBlock(payload) }, assets);
+}
+
+/** The data a map page carries (also built in the browser by the template page's live demo). */
+export function makePayload(input: Omit<PageInput, 'poster'>, opts: { demo?: boolean } = {}): PagePayload {
+  const m = manifestSchema.parse(input.manifest);
+  const { compiled } = input;
   const legend = compiled.legend;
   const overlayHtml = renderOverlay(input.overlay, {
     title: input.title,
@@ -44,17 +51,26 @@ export function buildPage(input: PageInput, assets: PageAssets): string {
     deck: compiled.deck, features: compiled.features, legend, choices: compiled.choices,
     mapping: input.mapping, overlayHtml, basemap: input.basemap, recipe: input.recipe,
   };
+  if (opts.demo) payload.demo = true;
+  return payload;
+}
 
-  const title = escapeHtml(input.title);
-  const poster = input.poster
-    ? `<img src="${escapeHtml(input.poster)}" alt="">`
+/**
+ * The page shell: poster or title card, bootstrap, runtime. `payload` is the serialized JSON block, or null when a
+ * script on the page writes it before the runtime starts (the template page's demo).
+ */
+export function pageHtml(p: { title: string; chrome: 'light' | 'dark'; poster?: string; payload: string | null; beforeRuntime?: string }, assets: PageAssets): string {
+
+  const title = escapeHtml(p.title);
+  const poster = p.poster
+    ? `<img src="${escapeHtml(p.poster)}" alt="">`
     : `<div class="zm-card"><p class="zm-card-title">${title}</p><p class="zm-card-note">Loading 3D map…</p></div>`;
   const runtime = 'inline' in assets.runtime
     ? `<script>${scriptSafe(assets.runtime.inline)}</script>`
     : `<script src="${escapeHtml(assets.runtime.src)}" integrity="${escapeHtml(assets.runtime.integrity)}" crossorigin="anonymous" defer></script>`;
 
   return `<!doctype html>
-<html lang="en" data-zm-chrome="${m.chrome}">
+<html lang="en" data-zm-chrome="${p.chrome}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,9 +82,8 @@ export function buildPage(input: PageInput, assets: PageAssets): string {
 <div id="zm-map"></div>
 <div id="zm-poster" aria-hidden="true">${POSTER_START}${poster}${POSTER_END}<div class="zm-progress"><span></span></div></div>
 <div id="zm-status" role="status" aria-live="polite"></div>
-<script type="application/json" id="${PAYLOAD_ID}">${serializeJsonBlock(payload)}</script>
-<script>${scriptSafe(assets.bootstrap)}</script>
-${runtime}
+${p.payload === null ? '' : `<script type="application/json" id="${PAYLOAD_ID}">${p.payload}</script>\n`}<script>${scriptSafe(assets.bootstrap)}</script>
+${p.beforeRuntime ? `<script>${scriptSafe(p.beforeRuntime)}</script>\n` : ''}${runtime}
 </body>
 </html>
 `;

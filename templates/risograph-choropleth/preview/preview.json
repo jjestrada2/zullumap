@@ -1,0 +1,6 @@
+{
+  "name": "Risograph choropleth",
+  "data": "bogota-grid.geojson",
+  "mapping": { "value": "density", "height": "density" },
+  "title": "Risograph choropleth"
+}

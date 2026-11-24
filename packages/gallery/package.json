@@ -1,0 +1,9 @@
+{
+  "name": "@zullumap/gallery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Builds zullumap's static site: template pages with a live demo, the 404 redirect and the home page.",
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "devDependencies": { "@zullumap/core": "0.1.0", "@zullumap/viewer": "0.1.0" }
+}

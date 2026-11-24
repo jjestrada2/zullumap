@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "build": "npm run build -w zullumap",
-    "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/viewer --noEmit && tsc -p packages/cli --noEmit"
+    "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/viewer --noEmit && tsc -p packages/cli --noEmit && tsc -p packages/gallery --noEmit",
+    "site": "node packages/gallery/build.mjs --out site"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

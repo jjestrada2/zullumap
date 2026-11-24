@@ -42,11 +42,15 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--overprint);outline-
 .panel pre{margin:0 0 8px;padding:12px;white-space:pre-wrap;word-break:break-all;background:var(--panel);border:1px solid var(--ink);font:0.875rem/1.5 var(--mono)}
 .panel p{margin:8px 0}
 .panel a{color:var(--fg);font-weight:600}
+.explore{position:absolute;left:50%;bottom:88px;transform:translateX(-50%);min-height:44px;padding:0 16px;border:0;border-radius:0;
+  background:var(--panel);color:var(--fg);font:600 1rem/1 var(--body);cursor:pointer;pointer-events:auto}
+.explore[hidden]{display:none}
 .copy{min-height:44px;padding:0 16px;border:1px solid var(--ink);border-radius:0;background:none;color:var(--fg);font:600 1rem/1 var(--body);cursor:pointer}
 .note{color:var(--muted)}
 .close{position:absolute;top:12px;right:12px;min-width:44px;min-height:44px;border:0;background:none;color:var(--fg);font:600 1rem/1 var(--body);cursor:pointer}
 .panel .primary{width:calc(100% - 4px);margin-bottom:8px}
 @media (max-width:${PHONE_MAX}px){
+  .explore{bottom:160px} /* above the template page's Remix button */
   .panel{top:auto;left:0;width:auto;max-height:85vh;border-left:0;border-top:1px solid var(--ink);border-radius:2px 2px 0 0;padding:24px 16px}
 }
 @media (prefers-reduced-motion:reduce){.sheet,.primary{transition:none}}
@@ -61,6 +65,8 @@ export interface Chrome {
   /** Trailer layout: only the credits line, just above LinkedIn's bottom safe zone (design D5). The chip is on the end card. */
   captureLayout(): void;
   setCredits(nodes: Node[]): void;
+  /** Demo maps embedded in a page: show or hide the "Tap to explore" hint (design D9). */
+  setExploreHint(text: string | null, onActivate: () => void): void;
 }
 
 export function mountChrome(args: {
@@ -83,7 +89,7 @@ export function mountChrome(args: {
   // Attribution chip (design D6).
   const chip = el(texts ? 'a' : 'span', 'chip', texts ? 'made with zullumap · remix' : 'made with zullumap');
   if (texts && chip instanceof HTMLAnchorElement) { chip.href = texts.templateUrl; chip.target = '_blank'; chip.rel = 'noopener'; }
-  root.append(chip);
+  if (!payload.demo) root.append(chip);
 
   const credits = el('p', 'credits');
   const desktopRemix = texts ? button('primary desktop-remix', 'Remix this map') : null;
@@ -124,6 +130,9 @@ export function mountChrome(args: {
   panel?.querySelector('.close')?.addEventListener('click', closePanel);
   addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
 
+  const hint = button('explore', '');
+  hint.hidden = true;
+
   document.body.append(host);
 
   const legend = () => overlayRoot.querySelector('[data-zm-region=legend]') ?? legendRoot.querySelector('[data-zm-region=legend]');
@@ -135,14 +144,15 @@ export function mountChrome(args: {
       phoneNow = phone;
       const lg = legend();
       for (const n of [chip, credits, sheet, desktopRemix, panel]) n?.remove();
+      const chips = payload.demo ? [] : [chip];
       if (phone) {
         if (lg) legendRoot.append(lg);
         sheet.append(credits);
         if (sheetRemix) sheet.append(sheetRemix);
-        root.append(chip, sheet);
+        root.append(...chips, sheet);
       } else {
         if (lg) overlayRoot.append(lg);
-        root.append(chip, credits);
+        root.append(...chips, credits);
         if (desktopRemix) root.append(desktopRemix);
       }
       if (panel) root.append(panel);
@@ -151,6 +161,12 @@ export function mountChrome(args: {
       for (const n of [chip, sheet, desktopRemix, panel]) n?.remove();
       credits.classList.add('capture');
       root.append(credits);
+    },
+    setExploreHint(text, onActivate) {
+      hint.textContent = text ?? '';
+      hint.hidden = !text;
+      hint.onclick = text ? () => onActivate() : null;
+      if (text && !hint.isConnected) root.append(hint);
     },
     setCredits(nodes) {
       credits.replaceChildren(...nodes);
