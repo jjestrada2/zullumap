@@ -1,0 +1,14 @@
+{
+  "layers": [
+    {
+      "@@type": "GeoJsonLayer",
+      "id": "prints",
+      "extruded": true,
+      "filled": true,
+      "stroked": false,
+      "wireframe": false,
+      "getFillColor": "{{slot:value}}",
+      "getElevation": "{{slot:height}}"
+    }
+  ]
+}

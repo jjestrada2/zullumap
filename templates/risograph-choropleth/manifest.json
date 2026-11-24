@@ -1,0 +1,24 @@
+{
+  "id": "risograph-choropleth",
+  "version": "1.0.0",
+  "author": "Juan Estrada",
+  "license": "CC-BY-4.0",
+  "geometry": "polygon",
+  "slots": {
+    "value": { "type": "number", "required": true },
+    "height": { "type": "number", "required": false },
+    "label": { "type": "string", "required": false }
+  },
+  "title": { "maxLength": 48 },
+  "rules": {
+    "classMethods": ["quantile", "natural", "equal"],
+    "classCount": { "min": 2, "max": 7, "default": 4 },
+    "heightScale": { "min": 0, "max": 0.5, "default": 0.12 },
+    "zoom": { "min": -2, "max": 17 },
+    "pitch": { "min": 0, "max": 70, "default": 50 }
+  },
+  "ramp": ["#2499A6", "#F49AA8", "#E95E5A", "#E9B24F"],
+  "inks": ["teal", "pink", "coral", "mustard"],
+  "loading": "ink-pass",
+  "chrome": "light"
+}
