@@ -51,4 +51,23 @@ describe('zullumap CLI', () => {
     expect(r.code).toBe(1);
     expect(r.err.join('\n')).toMatch(/Unknown command "paint"/);
   });
+
+  test('remix prints its notes, then where the page is, the trailer step and the new remix link', async () => {
+    const { dir, f } = data();
+    await run(['render', 'risograph-choropleth@1.0.0', '--template-dir', TEMPLATE, '--data', f, '--map', 'value=v', '--title', 'T', '--out', join(dir, 'orig'), '--no-open']);
+    const r = await run(['remix', join(dir, 'orig'), '--template-dir', TEMPLATE, '--data', f, '--title', 'Mine', '--out', join(dir, 'mine')]);
+    expect(r.code).toBe(0);
+    expect(r.out).toEqual([
+      'Note: Using column "v" for value, as the original map did',
+      `Saved your map: ${join(dir, 'mine', 'index.html')}`,
+      `Make a trailer: zullumap trailer ${join(dir, 'mine')}`,
+      'Remix link: https://jjestrada2.github.io/zullumap/t/risograph-choropleth@1.0.0#r=0',
+    ]);
+    expect(r.opened).toEqual([join(dir, 'mine', 'index.html')]);
+  });
+
+  test('usage lists remix', async () => {
+    expect((await run(['--help'])).out.join('\n')).toMatch(/zullumap remix <map-folder \| remix-link \| map-page-url>/);
+  });
 });
+

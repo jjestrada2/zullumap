@@ -37,12 +37,7 @@ export function parseRenderArgs(argv: string[]): RenderArgs {
   if (!values.title) throw new Error('--title is required: the map title');
   if (!values.out) throw new Error('--out is required: the folder to write the map page to');
 
-  const mapping: Record<string, string> = {};
-  for (const m of values.map) {
-    const eq = m.indexOf('=');
-    if (eq < 1 || eq === m.length - 1) throw new Error(`--map needs slot=column (got "${m}")`);
-    mapping[m.slice(0, eq)] = m.slice(eq + 1);
-  }
+  const mapping = parseMaps(values.map);
   return {
     template: { id: t[1]!, version: t[2] }, templateDir: values['template-dir'], data: values.data, mapping,
     title: values.title, out: values.out, options: values.options, recipe: !values['no-recipe'], open: !values['no-open'],
@@ -69,4 +64,59 @@ export function parseTrailerArgs(argv: string[]): TrailerArgs {
   const fps = Number(values.fps ?? 30);
   if (!(Number.isInteger(fps) && fps >= 1 && fps <= 60)) throw new Error('--fps must be between 1 and 60');
   return { map, width, height, duration, fps, out: values.out ?? join(map, 'trailer.mp4') };
+}
+
+export interface RemixArgs {
+  source: string;
+  templateDir: string;
+  data: string;
+  /** Checked after the recipe is read, so the error can show the original title. */
+  title: string | undefined;
+  mapping: Record<string, string>;
+  template?: { id: string; version: string };
+  /** Defaults to a folder named after the title. */
+  out: string | undefined;
+  recipe: boolean;
+  open: boolean;
+}
+
+/** `zullumap remix <map-folder | remix-link | map-page-url> --template-dir <folder> --data <file> --title "…" [--map slot=column] [--template id@version] [--out <folder>]` */
+export function parseRemixArgs(argv: string[]): RemixArgs {
+  const { values, positionals } = parseArgs({
+    args: argv, allowPositionals: true, strict: true,
+    options: {
+      'template-dir': { type: 'string' }, data: { type: 'string' }, map: { type: 'string', multiple: true },
+      title: { type: 'string' }, out: { type: 'string' }, template: { type: 'string' },
+      'no-recipe': { type: 'boolean' }, 'no-open': { type: 'boolean' },
+    },
+  });
+  const source = positionals[0];
+  if (!source) throw new Error('Name what to remix: a map page folder, a remix link or a map page URL');
+  if (positionals.length > 1) throw new Error(`Unexpected argument "${positionals[1]}"`);
+  if (!values['template-dir']) {
+    throw new Error('The template registry is not published yet; pass the template folder with --template-dir, e.g. --template-dir templates/risograph-choropleth');
+  }
+  if (!values.data) throw new Error('--data is required: the GeoJSON file with your data');
+  let template: RemixArgs['template'];
+  if (values.template) {
+    const t = TEMPLATE_RE.exec(values.template);
+    if (!t?.[2]) throw new Error('--template needs a version, e.g. --template risograph-choropleth@1.0.0');
+    template = { id: t[1]!, version: t[2] };
+  }
+  const args: RemixArgs = {
+    source, templateDir: values['template-dir'], data: values.data, title: values.title,
+    mapping: parseMaps(values.map ?? []), out: values.out, recipe: !values['no-recipe'], open: !values['no-open'],
+  };
+  if (template) args.template = template;
+  return args;
+}
+
+function parseMaps(maps: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  for (const m of maps) {
+    const eq = m.indexOf('=');
+    if (eq < 1 || eq === m.length - 1) throw new Error(`--map needs slot=column (got "${m}")`);
+    mapping[m.slice(0, eq)] = m.slice(eq + 1);
+  }
+  return mapping;
 }

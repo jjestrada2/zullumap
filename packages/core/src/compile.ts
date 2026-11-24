@@ -73,7 +73,8 @@ export function compile(input: CompileInput): CompileResult {
   const deck = mapStrings(structuredClone(input.deck), (value, key) => {
     const slot = SLOT_RE.exec(value)?.[1];
     if (!slot) return value;
-    if (!input.mapping[slot]) return undefined; // optional slot not mapped: drop the prop
+    // Optional slot not mapped: drop the prop, except elevation, whose deck.gl default (1000 m) would raise a flat map.
+    if (!input.mapping[slot]) return key === 'getElevation' ? 0 : undefined;
     const vals = (prepared.values[slot] ?? []).filter((v): v is number => v !== null);
     if (COLOR_PROPS.has(key)) {
       const c = classify(vals, choices.method, choices.classCount);
