@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { parseRenderArgs, parseTrailerArgs } from './args';
+import { parseRemixArgs, parseRenderArgs, parseTrailerArgs } from './args';
+import { remix } from './remix';
 import { recordTrailer } from './trailer';
 import { render } from './render';
 import type { PageAssets } from '@zullumap/viewer/src/page';
@@ -20,12 +21,16 @@ Usage:
   zullumap render <template>@<version> --template-dir <folder> --data <file.geojson>
                   --map value=<column> [--map height=<column>] [--map label=<column>]
                   --title "<title>" --out <folder> [--options <choices.json>] [--no-recipe] [--no-open]
+  zullumap remix <map-folder | remix-link | map-page-url> --template-dir <folder> --data <file.geojson>
+                 --title "<title>" [--map slot=<column>] [--out <folder>] [--template <id>@<version>] [--no-recipe] [--no-open]
   zullumap trailer <map-folder> [--size 1080x1350] [--duration 12] [--fps 30] [--out trailer.mp4]
 
 Example:
   zullumap render risograph-choropleth@1.0.0 --template-dir templates/risograph-choropleth \\
     --data examples/bogota-grid.geojson --map value=density --map height=density \\
     --title "Density in Bogotá (synthetic)" --out my-map
+  zullumap remix my-map --template-dir templates/risograph-choropleth \\
+    --data mine.geojson --title "Density in Medellín"
   zullumap trailer my-map`;
 
 /** CLI entry: returns the exit code. */
@@ -35,6 +40,17 @@ export async function main(argv: string[], io: Io): Promise<number> {
     if (!command || command === '--help' || command === '-h' || command === 'help') {
       io.out(USAGE);
       return command ? 0 : 1;
+    }
+    if (command === 'remix') {
+      const args = parseRemixArgs(rest);
+      const r = await remix(args, io.loadAssets());
+      for (const n of r.notes) io.out(`Note: ${n}`);
+      for (const w of r.warnings) io.err(`Warning: ${w}`);
+      io.out(`Saved your map: ${join(r.outDir, 'index.html')}`);
+      io.out(`Make a trailer: zullumap trailer ${r.outDir}`);
+      if (r.link) io.out(`Remix link: ${r.link}`);
+      if (args.open && io.isTTY) io.open(r.page);
+      return 0;
     }
     if (command === 'trailer') {
       const args = parseTrailerArgs(rest);

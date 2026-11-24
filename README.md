@@ -25,6 +25,18 @@ node packages/cli/bin/zullumap.js trailer my-map
 It saves `my-map/trailer.mp4` (12 s camera path + 3 s end card with the remix QR code) and adds the
 opening view to the map page as its loading poster. `--size 1080x1920`, `--duration` and `--fps` adjust it.
 
+Remix someone's map with your own data: point at their map folder, their remix link or their published
+map page, and give your data and title. Template, colors, class method and count, height scale and pitch
+come from the original; class breaks and framing are re-fitted to your data:
+
+```bash
+node packages/cli/bin/zullumap.js remix my-map --template-dir templates/risograph-choropleth \
+  --data mine.geojson --title "Density in Medellín"
+```
+
+Columns with the same names as the original's are reused; otherwise map them with `--map value=<column>`.
+The page goes to a folder named after the title (`density-in-medellin/`) unless you pass `--out`.
+
 `--map` connects the template's slots to your data's columns: `value` (number, color), `height` (number,
 optional) and `label` (text, optional). `--options choices.json` overrides class method, class count,
 height scale or pitch within the template's rules; `--no-recipe` leaves out the remix link.

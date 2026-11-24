@@ -8,7 +8,12 @@ import type { RenderArgs } from './args';
 export const GALLERY_HOST = 'https://jjestrada2.github.io/zullumap';
 const LARGE_DATA_BYTES = 20 * 1024 * 1024;
 
-export type RenderOptions = Omit<RenderArgs, 'open' | 'options'> & { options?: string };
+export type RenderOptions = Omit<RenderArgs, 'open' | 'options'> & {
+  /** --options file with choices. */
+  options?: string;
+  /** Choices passed directly (remix re-applies the recipe's); an --options file overrides them. */
+  choices?: Record<string, unknown>;
+};
 export interface RenderResult { outDir: string; page: string; link: string | null; warnings: string[] }
 
 /** Template + data + choices → an interactive map page folder (index.html, recipe.json). */
@@ -29,7 +34,8 @@ export function render(o: RenderOptions, assets: PageAssets): RenderResult {
   const warnings: string[] = [];
   const data = readData(o.data, m.geometry, warnings);
   checkTextColumns(data, o.mapping, m.slots);
-  const options = o.options ? readJson(o.options, '--options') as Record<string, unknown> : undefined;
+  const fileOptions = o.options ? readJson(o.options, '--options') as Record<string, unknown> : undefined;
+  const options = o.choices || fileOptions ? { ...o.choices, ...fileOptions } : undefined;
 
   const compiled = compile({ manifest: t.manifest, deck: t.deck, data, mapping: o.mapping, options, overlay: t.overlay });
   warnings.push(...compiled.warnings);

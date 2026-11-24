@@ -53,9 +53,15 @@ describe('compile', () => {
     expect((compile(base).deck.layers[0] as Record<string, any>).opacity).toBe(0.9);
   });
 
-  test('drops props whose optional slot is not mapped', () => {
+  test('an unmapped optional height leaves the map flat, not at deck.gl\'s 1000 m default', () => {
     const r = compile({ ...base, mapping: { value: 'pop' } });
-    expect((r.deck.layers[0] as Record<string, any>).getElevation).toBeUndefined();
+    expect((r.deck.layers[0] as Record<string, any>).getElevation).toBe(0);
+  });
+
+  test('drops other props whose optional slot is not mapped', () => {
+    const deck2 = { layers: [{ '@@type': 'ScatterplotLayer', id: 'p', getFillColor: '{{slot:value}}', getRadius: '{{slot:height}}' }] };
+    const r = compile({ ...base, deck: deck2, mapping: { value: 'pop' } });
+    expect((r.deck.layers[0] as Record<string, any>).getRadius).toBeUndefined();
   });
 
   test('annotates each feature with its slot values for the helpers', () => {
